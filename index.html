@@ -6,13 +6,19 @@
   <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
   <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
+  <link rel="stylesheet" type="text/css" href="./style/styles.css">
   <title>Hello from Electron renderer!</title>
 </head>
 
 <body>
-  <h1>Hello from Electron renderer!</h1>
-  <p>👋</p>
-  <p id="info"></p>
+  <h1>Hello from Electron renderer! 👋</h1>
+  <p>Current theme source: <strong id="theme-source">System</strong></p>
+
+  <button id="toggle-dark-mode">Toggle Dark Mode</button>
+  <button id="reset-to-system">Reset to System Theme</button>
+
+  <div class="drag" draggable="true" id="drag">Drag me</div>
+  <table id="excel-data"></table>
 </body>
 
 <script src="./renderer.js"></script>

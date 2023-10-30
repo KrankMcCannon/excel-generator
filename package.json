@@ -10,7 +10,8 @@
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
-    "make": "electron-forge make"
+    "make": "electron-forge make",
+    "publish": "electron-forge publish"
   },
   "devDependencies": {
     "@electron-forge/cli": "^6.4.2",
@@ -23,6 +24,8 @@
     "electron": "^27.0.2"
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.0"
+    "electron-squirrel-startup": "^1.0.0",
+    "update-electron-app": "^3.0.0",
+    "xlsx": "^0.18.5"
   }
 }

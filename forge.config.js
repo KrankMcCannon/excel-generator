@@ -27,4 +27,17 @@ module.exports = {
       config: {},
     },
   ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'KrankMcCannon',
+          name: 'excel-generator'
+        },
+        prerelease: false,
+        draft: true
+      }
+    }
+  ],
 };
