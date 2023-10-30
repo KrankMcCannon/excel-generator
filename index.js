@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, nativeTheme } = require("electron");
 const path = require("path");
 const XLSX = require("xlsx");
+const dataExcel = require("./data.json");
+const { beautifyHeaders } = require("./helpers.js");
 // require('update-electron-app')(); // uncomment to enable auto-updates
 
 const createWindow = () => {
@@ -35,6 +37,20 @@ ipcMain.on("read-excel", (event, filePath) => {
   const worksheet = workbook.Sheets[firstSheet];
   const data = XLSX.utils.sheet_to_json(worksheet);
   event.reply("excel-data", data);
+});
+
+ipcMain.on("create-excel", () => {
+  const beautifiedData = dataExcel.map((entry) => {
+    let newObj = {};
+    for (let key in entry) {
+      newObj[beautifyHeaders(key)] = entry[key];
+    }
+    return newObj;
+  });
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(beautifiedData);
+  XLSX.utils.book_append_sheet(wb, ws, "Dogs");
+  XLSX.writeFile(wb, "dog_grooming_database.xlsx");
 });
 
 app.whenReady().then(() => {

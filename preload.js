@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld("electron", {
   onExcelData: (callback) => {
     ipcRenderer.on("excel-data", (event, data) => callback(data));
   },
+  createExcelFile: () => {
+    ipcRenderer.send("create-excel");
+  },
 });
 
 contextBridge.exposeInMainWorld("darkMode", {

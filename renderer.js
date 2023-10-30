@@ -56,3 +56,7 @@ window.electron.onExcelData((data) => {
 
   document.getElementById("excel-data").innerHTML = tableHTML;
 });
+
+document.getElementById("create-excel").addEventListener("click", () => {
+  window.electron.createExcelFile();
+});
