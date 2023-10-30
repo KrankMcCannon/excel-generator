@@ -39,9 +39,13 @@ tr:nth-child(even) {
   background-color: #707070f5;
 }
 
-.drag {
+#drag {
   border: 2px solid black;
   border-radius: 3px;
   padding: 5px;
   margin: 30px;
+}
+
+#add-row, #submit-table {
+  display: none;
 }

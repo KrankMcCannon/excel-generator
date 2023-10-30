@@ -13,8 +13,8 @@ contextBridge.exposeInMainWorld("electron", {
   onExcelData: (callback) => {
     ipcRenderer.on("excel-data", (event, data) => callback(data));
   },
-  createExcelFile: () => {
-    ipcRenderer.send("create-excel");
+  createExcelFile: (data) => {
+    ipcRenderer.send("create-excel", data);
   },
 });
 
