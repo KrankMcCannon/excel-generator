@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld("electron", {
   readExcel: (filePath) => {
     ipcRenderer.send("read-excel", filePath);
   },
+  readOpenExcel: () => {
+    ipcRenderer.send("read-open-excel");
+  },
   onExcelData: (callback) => {
     ipcRenderer.on("excel-data", (event, data) => callback(data));
   },

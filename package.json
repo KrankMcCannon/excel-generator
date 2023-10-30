@@ -9,6 +9,7 @@
   "private": true,
   "scripts": {
     "start": "electron-forge start",
+    "start:dev": "npx electronmon .",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish"

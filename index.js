@@ -1,4 +1,12 @@
-const { app, BrowserWindow, ipcMain, nativeTheme } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  nativeTheme,
+  dialog,
+  Menu,
+  MenuItem,
+} = require("electron");
 const path = require("path");
 const XLSX = require("xlsx");
 const dataExcel = require("./data.json");
@@ -30,16 +38,39 @@ ipcMain.handle("dark-mode:system", () => {
   nativeTheme.themeSource = "system";
 });
 
-ipcMain.on("read-excel", (event, filePath) => {
-  const workbook = XLSX.readFile(filePath);
+ipcMain.on("read-excel", async (event, filePath) => {
+  if (!filePath) return;
+
+    const workbook = XLSX.readFile(filePath);
+    const sheetNames = workbook.SheetNames;
+    const firstSheet = sheetNames[0];
+    const worksheet = workbook.Sheets[firstSheet];
+    const data = XLSX.utils.sheet_to_json(worksheet);
+    event.reply("excel-data", data);
+});
+
+ipcMain.on("read-open-excel", async (event) => {
+  const { filePaths } = await dialog.showOpenDialog({
+    filters: [{ name: "Excel", extensions: ["xlsx"] }],
+  });
+  if (!filePaths && filePaths.length === 0) return; // User canceled the dialog
+
+  const workbook = XLSX.readFile(filePaths[0]);
   const sheetNames = workbook.SheetNames;
   const firstSheet = sheetNames[0];
   const worksheet = workbook.Sheets[firstSheet];
   const data = XLSX.utils.sheet_to_json(worksheet);
-  event.reply("excel-data", data);
+
+  // Sending data to renderer process
+  event.sender.send("file-data", data);
 });
 
-ipcMain.on("create-excel", () => {
+ipcMain.on("create-excel", async () => {
+  const { filePath } = await dialog.showSaveDialog({
+    filters: [{ name: "Excel", extensions: ["xlsx"] }],
+  });
+  if (!filePath) return; // User canceled the dialog
+
   const beautifiedData = dataExcel.map((entry) => {
     let newObj = {};
     for (let key in entry) {
@@ -50,11 +81,57 @@ ipcMain.on("create-excel", () => {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(beautifiedData);
   XLSX.utils.book_append_sheet(wb, ws, "Dogs");
-  XLSX.writeFile(wb, "dog_grooming_database.xlsx");
+  XLSX.writeFile(wb, filePath);
 });
+
+let recentFiles = [];
+
+const createMenu = () => {
+  const openMenuItem = new MenuItem({
+    label: "Open...",
+    click: async () => {
+      const { filePaths } = await dialog.showOpenDialog({
+        filters: [{ name: "Excel", extensions: ["xlsx"] }],
+      });
+      if (filePaths.length) {
+        const workbook = XLSX.readFile(filePaths[0]);
+        const sheetNames = workbook.SheetNames;
+        const firstSheet = sheetNames[0];
+        const worksheet = workbook.Sheets[firstSheet];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+        // Send data to the renderer process or handle it
+        const allWindows = BrowserWindow.getAllWindows();
+        for (const window of allWindows) {
+          window.webContents.send("excel-data", data);
+        }
+        // Additionally, store this file in recentFiles and update the menu
+        recentFiles.unshift(filePaths[0]); // Add to the start
+        if (recentFiles.length > 5) recentFiles.pop(); // Keep recent 5 files
+        createMenu(); // Recreate the menu
+      }
+    },
+  });
+
+  const recentMenuItems = recentFiles.map((file) => ({
+    label: `Open Recent: ${path.basename(file)}`,
+    click: async () => {
+      ipcMain.emit("read-excel", null, file);
+    },
+  }));
+
+  const template = [
+    {
+      label: "File",
+      submenu: [openMenuItem, { type: "separator" }, ...recentMenuItems],
+    },
+  ];
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+};
 
 app.whenReady().then(() => {
   createWindow();
+  createMenu();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
