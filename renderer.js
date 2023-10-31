@@ -48,6 +48,7 @@ window.electron.onExcelData((data) => {
 
   document.getElementById("excel-data").innerHTML = tableHTML;
   document.getElementById("update-table").style.display = "block";
+  document.getElementById("create-table").style.display = "none";
 });
 
 document.getElementById("prepare-table").addEventListener("click", () => {
@@ -84,9 +85,11 @@ document.getElementById("prepare-table").addEventListener("click", () => {
   const tableContainer = document.getElementById("excel-data");
   tableContainer.innerHTML = tableHTML;
 
-  // Make 'Add New Row' and 'Create File' buttons visible
+  // Make 'Add New Row' and 'Create File' buttons visible and hide 'Prepare Table' and 'Update File' buttons
   document.getElementById("add-row").style.display = "block";
   document.getElementById("create-table").style.display = "block";
+  document.getElementById("update-table").style.display = "none";
+  document.getElementById("prepare-table").style.display = "none";
 });
 
 document.getElementById("add-row").addEventListener("click", () => {
