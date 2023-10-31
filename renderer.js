@@ -57,12 +57,15 @@ window.electron.onExcelData((data) => {
 document.getElementById("prepare-table").addEventListener("click", () => {
   let tableHTML = "<table id='excel-data'><thead><tr>";
   const headers = [
-    "dog_name",
-    "breed",
-    "age",
-    "last_grooming_date",
-    "service_type",
-    "notes",
+    "cane",
+    "proprietario",
+    "telefono",
+    "razza",
+    "data_ultimo_taglio",
+    "data_prossimo_taglio",
+    "servizio",
+    "prezzo",
+    "note",
   ];
 
   // Generating headers
