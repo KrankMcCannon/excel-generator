@@ -28,19 +28,21 @@ dropZone.addEventListener("drop", (e) => {
 });
 
 window.electron.onExcelData((data) => {
+  console.log(data);
   // This is your Excel data
   let tableHTML = "<thead><tr>";
 
   // Assume that the first row of your Excel file contains the headers
-  for (let header in data[0]) {
+  for (const header of data[0]) {
     tableHTML += `<th>${header}</th>`;
   }
   tableHTML += "</tr></thead><tbody>";
 
-  for (let row of data) {
+  for (const row of data.slice(1)) {
     tableHTML += "<tr>";
-    for (let header in row) {
-      tableHTML += `<td>${row[header]}</td>`;
+    for (const header in row) {
+      // contenteditable allows user to input data
+      tableHTML += `<td contenteditable='true'>${row[header]}</td>`;
     }
     tableHTML += "</tr>";
   }
@@ -49,6 +51,7 @@ window.electron.onExcelData((data) => {
   document.getElementById("excel-data").innerHTML = tableHTML;
   document.getElementById("update-table").style.display = "block";
   document.getElementById("create-table").style.display = "none";
+  document.getElementById("prepare-table").style.display = "none";
 });
 
 document.getElementById("prepare-table").addEventListener("click", () => {
@@ -75,7 +78,8 @@ document.getElementById("prepare-table").addEventListener("click", () => {
   // Add one empty row
   tableHTML += "<tr>";
   headers.forEach(() => {
-    tableHTML += `<td contenteditable='true'></td>`; // contenteditable allows user to input data
+    // contenteditable allows user to input data
+    tableHTML += `<td contenteditable='true'></td>`;
   });
   tableHTML += "</tr>";
 
@@ -118,7 +122,8 @@ document.getElementById("update-table").addEventListener("click", () => {
   const data = rows.map((row) => {
     let rowData = {};
     headers.forEach((header, index) => {
-      rowData[header] = row.cells[index].textContent;
+      console.log(row.cells[index]);
+      rowData[header] = row.cells[index]?.textContent ?? "";
     });
     return rowData;
   });
