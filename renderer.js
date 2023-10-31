@@ -7,13 +7,6 @@ document
       : "Light";
   });
 
-document
-  .getElementById("reset-to-system")
-  .addEventListener("click", async () => {
-    await window.darkMode.system();
-    document.getElementById("theme-source").innerHTML = "System";
-  });
-
 const dropZone = document.getElementById("drag");
 
 dropZone.addEventListener("dragover", (e) => {

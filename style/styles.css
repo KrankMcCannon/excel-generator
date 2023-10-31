@@ -43,7 +43,7 @@ tr:nth-child(even) {
   border: 2px solid black;
   border-radius: 3px;
   padding: 5px;
-  margin: 30px;
+  margin: 20px 0;
 }
 
 #add-row, #submit-table {
