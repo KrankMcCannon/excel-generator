@@ -47,6 +47,7 @@ window.electron.onExcelData((data) => {
   tableHTML += "</tbody>";
 
   document.getElementById("excel-data").innerHTML = tableHTML;
+  document.getElementById("update-table").style.display = "block";
 });
 
 document.getElementById("prepare-table").addEventListener("click", () => {
@@ -83,9 +84,9 @@ document.getElementById("prepare-table").addEventListener("click", () => {
   const tableContainer = document.getElementById("excel-data");
   tableContainer.innerHTML = tableHTML;
 
-  // Make 'Add New Row' and 'Submit' buttons visible
-  document.getElementById("add-row").style.display = "inline";
-  document.getElementById("submit-table").style.display = "inline";
+  // Make 'Add New Row' and 'Create File' buttons visible
+  document.getElementById("add-row").style.display = "block";
+  document.getElementById("create-table").style.display = "block";
 });
 
 document.getElementById("add-row").addEventListener("click", () => {
@@ -99,17 +100,17 @@ document.getElementById("add-row").addEventListener("click", () => {
     cell.contentEditable = "true";
   }
 
-  // Show the "Add New Row" and "Submit" buttons
+  // Show the "Add New Row" button
   document.getElementById("add-row").style.display = "block";
-  document.getElementById("submit-table").style.display = "block";
 });
 
-document.getElementById("submit-table").addEventListener("click", () => {
+document.getElementById("update-table").addEventListener("click", () => {
   const table = document.getElementById("excel-data");
   const headers = Array.from(table.rows[0].cells).map(
     (header) => header.textContent
   );
-  const rows = Array.from(table.rows).slice(1); // Exclude headers
+  // Exclude headers
+  const rows = Array.from(table.rows).slice(1);
 
   const data = rows.map((row) => {
     let rowData = {};
@@ -119,5 +120,53 @@ document.getElementById("submit-table").addEventListener("click", () => {
     return rowData;
   });
 
-  window.electron.createExcelFile(data);
+  window.electron.updateExcelFile(data);
+});
+
+document.getElementById("create-table").addEventListener("click", () => {
+  const table = document.getElementById("excel-data");
+  const headers = Array.from(table.rows[0].cells).map(
+    (header) => header.textContent
+  );
+  // Exclude headers
+  const rows = Array.from(table.rows).slice(1);
+
+  const data = rows.map((row) => {
+    let rowData = {};
+    headers.forEach((header, index) => {
+      rowData[header] = row.cells[index].textContent;
+    });
+    return rowData;
+  });
+
+  window.electron.createNewExcelFile(data);
+});
+
+function showMessage(message) {
+  const messageBox = document.getElementById('app-message');
+  messageBox.textContent = message;
+  messageBox.classList.remove('app-message-hidden');
+  messageBox.classList.add('app-message-visible');
+
+  // Optionally, hide the message after some time, e.g., 5 seconds
+  setTimeout(() => {
+      messageBox.classList.remove('app-message-visible');
+      messageBox.classList.add('app-message-hidden');
+  }, 5000); // 5 seconds
+}
+
+window.electron.onUpdateResponse((response) => {
+  if (response.status === "error") {
+    showMessage(response.message);
+  } else if (response.status === "success") {
+    showMessage(response.message);
+  }
+});
+
+window.electron.onCreateResponse((response) => {
+  if (response.status === "error") {
+    showMessage(response.message);
+  } else if (response.status === "success") {
+    showMessage(response.message);
+  }
 });

@@ -11,6 +11,8 @@ const path = require("path");
 const XLSX = require("xlsx");
 // require('update-electron-app')(); // uncomment to enable auto-updates
 
+let currentOpenedFilePath = null; // No file opened by default
+
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 800,
@@ -39,6 +41,9 @@ ipcMain.handle("dark-mode:system", () => {
 ipcMain.on("read-excel", async (event, filePath) => {
   if (!filePath) return;
 
+  // Store the opened file path
+  currentOpenedFilePath = filePath;
+
   const workbook = XLSX.readFile(filePath);
   const sheetNames = workbook.SheetNames;
   const firstSheet = sheetNames[0];
@@ -51,7 +56,12 @@ ipcMain.on("read-open-excel", async (event) => {
   const { filePaths } = await dialog.showOpenDialog({
     filters: [{ name: "Excel", extensions: ["xlsx"] }],
   });
-  if (!filePaths && filePaths.length === 0) return; // User canceled the dialog
+
+  // User canceled the dialog
+  if (!filePaths && filePaths.length === 0) return;
+
+  // Store the opened file path
+  currentOpenedFilePath = filePaths[0];
 
   const workbook = XLSX.readFile(filePaths[0]);
   const sheetNames = workbook.SheetNames;
@@ -63,20 +73,44 @@ ipcMain.on("read-open-excel", async (event) => {
   event.sender.send("file-data", data);
 });
 
-ipcMain.on("create-excel", async (event, tableData) => {
-  const { filePath } = await dialog.showSaveDialog({
-    filters: [{ name: "Excel", extensions: ["xlsx"] }],
-  });
+// Existing File Update
+ipcMain.on("update-excel", async (event, tableData) => {
+  let filePath = currentOpenedFilePath;
 
-  if (!filePath) return; // User canceled the dialog
+  if (!filePath) {
+    event.reply("update-response", { status: "error", message: "Create the file before update it" });
+    return;
+  }
 
   if (tableData && tableData.length) {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(tableData);
-    console.log(ws, tableData);
     XLSX.utils.book_append_sheet(wb, ws, "Dogs");
     XLSX.writeFile(wb, filePath);
+    event.reply("update-response", { status: "success", message: "File updated successfully" });
   }
+});
+
+// New File Creation
+ipcMain.on("create-new-excel", async (event, tableData) => {
+  const tableValues = tableData.every((data) => !Object.values(data).every(value => value === ''));
+
+  if (tableValues) {
+    const saveDialog = await dialog.showSaveDialog({
+      filters: [{ name: "Excel", extensions: ["xlsx, csv"] }],
+    });
+    let filePath = saveDialog.filePath;
+
+    if (!filePath) return;
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(tableData);
+    XLSX.utils.book_append_sheet(wb, ws, "Dogs");
+    XLSX.writeFile(wb, filePath);
+    event.reply("create-response", { status: "success", message: "File created successfully" });
+  }
+
+  event.reply("create-response", { status: "error", message: "Insert data before create it" });
 });
 
 const createMenu = () => {
