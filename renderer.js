@@ -1,183 +1,137 @@
-document
-  .getElementById("toggle-dark-mode")
+// Event listeners
+
+document.getElementById("toggle-dark-mode")
   .addEventListener("click", async () => {
     const isDarkMode = await window.darkMode.toggle();
-    document.getElementById("theme-source").innerHTML = isDarkMode
-      ? "Dark"
-      : "Light";
+    document.getElementById("theme-source").innerText = isDarkMode ? "Dark" : "Light";
   });
 
 const dropZone = document.getElementById("drag");
-
-dropZone.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-});
-
-dropZone.addEventListener("dragenter", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
+["dragover", "dragenter", "drop"].forEach(eventType => {
+  dropZone.addEventListener(eventType, preventDefaultActions);
 });
 
 dropZone.addEventListener("drop", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-
   const filePath = e.dataTransfer.files[0].path;
   window.electron.readExcel(filePath);
 });
 
-window.electron.onExcelData((data) => {
-  console.log(data);
-  // This is your Excel data
-  let tableHTML = "<thead><tr>";
-
-  // Assume that the first row of your Excel file contains the headers
-  for (const header of data[0]) {
-    tableHTML += `<th>${header}</th>`;
-  }
-  tableHTML += "</tr></thead><tbody>";
-
-  for (const row of data.slice(1)) {
-    tableHTML += "<tr>";
-    for (const header in row) {
-      // contenteditable allows user to input data
-      tableHTML += `<td contenteditable='true'>${row[header]}</td>`;
-    }
-    tableHTML += "</tr>";
-  }
-  tableHTML += "</tbody>";
-
-  document.getElementById("excel-data").innerHTML = tableHTML;
-  document.getElementById("update-table").style.display = "block";
-  document.getElementById("create-table").style.display = "none";
-  document.getElementById("prepare-table").style.display = "none";
+window.electron.onExcelData(data => {
+  const table = processTableData(data);
+  const headers = Object.keys(table[0]);
+  document.getElementById("excel-data").innerHTML = generateTableHTML(headers, table);
+  ["update-table", "prepare-table", "create-table"].forEach(id => {
+    document.getElementById(id).style.display = id === "update-table" ? "block" : "none";
+  });
+  document.getElementById("add-row").style.display = "block";
 });
 
 document.getElementById("prepare-table").addEventListener("click", () => {
-  let tableHTML = "<table id='excel-data'><thead><tr>";
   const headers = [
-    "cane",
-    "proprietario",
-    "telefono",
-    "razza",
-    "data_ultimo_taglio",
-    "data_prossimo_taglio",
-    "servizio",
-    "prezzo",
-    "note",
-  ];
+    "cane", "proprietario", "telefono", "razza", "data_ultimo_taglio",
+    "data_prossimo_taglio", "servizio", "prezzo", "note"
+  ].map(header =>
+    header.split("_").map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(" ")
+  );
 
-  // Generating headers
-  headers.forEach((header) => {
-    tableHTML += `<th>${header
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ")}</th>`;
+  document.getElementById("excel-data").innerHTML = generateTableHTML(headers);
+  ["add-row", "create-table"].forEach(id => {
+    document.getElementById(id).style.display = "block";
   });
-
-  tableHTML += "</tr></thead><tbody>";
-
-  // Add one empty row
-  tableHTML += "<tr>";
-  headers.forEach(() => {
-    // contenteditable allows user to input data
-    tableHTML += `<td contenteditable='true'></td>`;
-  });
-  tableHTML += "</tr>";
-
-  tableHTML += "</tbody></table>";
-
-  // Inserting the table into the HTML
-  const tableContainer = document.getElementById("excel-data");
-  tableContainer.innerHTML = tableHTML;
-
-  // Make 'Add New Row' and 'Create File' buttons visible and hide 'Prepare Table' and 'Update File' buttons
-  document.getElementById("add-row").style.display = "block";
-  document.getElementById("create-table").style.display = "block";
-  document.getElementById("update-table").style.display = "none";
   document.getElementById("prepare-table").style.display = "none";
 });
 
 document.getElementById("add-row").addEventListener("click", () => {
-  const table = document
-    .getElementById("excel-data")
-    .getElementsByTagName("tbody")[0];
-  const newRow = table.insertRow(table.rows.length);
+  const table = document.getElementById("excel-data").querySelector("tbody");
+  const newRow = table.insertRow();
 
   for (let i = 0; i < table.parentElement.rows[0].cells.length; i++) {
-    let cell = newRow.insertCell(i);
+    const cell = newRow.insertCell(i);
     cell.contentEditable = "true";
   }
-
-  // Show the "Add New Row" button
-  document.getElementById("add-row").style.display = "block";
 });
 
 document.getElementById("update-table").addEventListener("click", () => {
   const table = document.getElementById("excel-data");
-  const headers = Array.from(table.rows[0].cells).map(
-    (header) => header.textContent
-  );
-  // Exclude headers
-  const rows = Array.from(table.rows).slice(1);
-
-  const data = rows.map((row) => {
-    let rowData = {};
-    headers.forEach((header, index) => {
-      console.log(row.cells[index]);
-      rowData[header] = row.cells[index]?.textContent ?? "";
-    });
-    return rowData;
-  });
-
+  const data = processTableData(table);
   window.electron.updateExcelFile(data);
 });
 
 document.getElementById("create-table").addEventListener("click", () => {
   const table = document.getElementById("excel-data");
-  const headers = Array.from(table.rows[0].cells).map(
-    (header) => header.textContent
-  );
-  // Exclude headers
-  const rows = Array.from(table.rows).slice(1);
-
-  const data = rows.map((row) => {
-    let rowData = {};
-    headers.forEach((header, index) => {
-      rowData[header] = row.cells[index].textContent;
-    });
-    return rowData;
-  });
-
+  const data = processTableData(table);
   window.electron.createNewExcelFile(data);
 });
+
+["onUpdateResponse", "onCreateResponse"].forEach(eventType => {
+  window.electron[eventType]((response) => {
+    showMessage(response.message);
+  });
+});
+
+// Utility functions
+
+function preventDefaultActions(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+function generateTableHTML(headers, data = []) {
+  let tableHTML = "<thead><tr>";
+
+  headers.forEach(header => {
+    tableHTML += `<th>${header}</th>`;
+  });
+  tableHTML += "</tr></thead><tbody>";
+
+  data.forEach(row => {
+    tableHTML += "<tr>";
+    headers.forEach(header => {
+      tableHTML += `<td contenteditable='true'>${row[header] || ''}</td>`;
+    });
+    tableHTML += "</tr>";
+  });
+
+  tableHTML += "</tbody>";
+  return tableHTML;
+}
+
+function processTableData(table) {
+  if (table.rows?.length > 0) {
+    const headers = Array.from(table.rows[0].cells).map(cell => cell.textContent);
+    const rows = Array.from(table.rows).slice(1);
+
+    return rows.map(row => {
+      const rowData = {};
+      headers.forEach((header, index) => {
+        rowData[header] = row.cells[index].textContent;
+      });
+      return rowData;
+    });
+  } else {
+    const headers = table[0];
+    const rows = table.slice(1);
+
+    return rows.map(row => {
+      const rowData = {};
+      headers.forEach((header, index) => {
+        rowData[header] = row[index];
+      });
+      return rowData;
+    });
+  }
+}
 
 function showMessage(message) {
   const messageBox = document.getElementById('app-message');
   messageBox.textContent = message;
-  messageBox.classList.remove('app-message-hidden');
-  messageBox.classList.add('app-message-visible');
+  messageBox.classList.toggle('app-message-hidden', false);
+  messageBox.classList.toggle('app-message-visible', true);
 
-  // Optionally, hide the message after some time, e.g., 5 seconds
   setTimeout(() => {
-      messageBox.classList.remove('app-message-visible');
-      messageBox.classList.add('app-message-hidden');
-  }, 5000); // 5 seconds
+    messageBox.classList.toggle('app-message-visible', false);
+    messageBox.classList.toggle('app-message-hidden', true);
+  }, 5000);
 }
-
-window.electron.onUpdateResponse((response) => {
-  if (response.status === "error") {
-    showMessage(response.message);
-  } else if (response.status === "success") {
-    showMessage(response.message);
-  }
-});
-
-window.electron.onCreateResponse((response) => {
-  if (response.status === "error") {
-    showMessage(response.message);
-  } else if (response.status === "success") {
-    showMessage(response.message);
-  }
-});

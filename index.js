@@ -13,9 +13,6 @@ const ExcelJS = require("exceljs");
 const csvParser = require("csv-parser");
 // require('update-electron-app')(); // uncomment to enable auto-updates
 
-// No file opened by default
-let currentOpenedFilePath = null;
-
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 800,
@@ -28,234 +25,6 @@ const createWindow = () => {
   win.loadFile("index.html");
 };
 
-ipcMain.handle("dark-mode:toggle", () => {
-  if (nativeTheme.shouldUseDarkColors) {
-    nativeTheme.themeSource = "light";
-  } else {
-    nativeTheme.themeSource = "dark";
-  }
-  return nativeTheme.shouldUseDarkColors;
-});
-
-ipcMain.handle("dark-mode:system", () => {
-  nativeTheme.themeSource = "system";
-});
-
-ipcMain.on("read-excel", async (event, filePath) => {
-  if (!filePath) return;
-
-  // Store the opened file path
-  currentOpenedFilePath = filePath;
-
-  const fileExtension = path.extname(currentOpenedFilePath);
-
-  if (fileExtension === ".xlsx") {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filePath);
-    const worksheet = workbook.worksheets[0];
-    const jsonData = [];
-    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-      // `.slice(1)` because exceljs includes an extra empty item at the start of the array
-      jsonData.push(row.values.slice(1));
-    });
-    // Assuming date is in column 4
-    const dateColumn = worksheet.getColumn(4);
-    dateColumn.numFmt = "dd-mm-yyyy";
-    event.reply("excel-data", jsonData);
-  } else if (fileExtension === ".csv") {
-    const jsonData = [];
-    const isFirstRow = true;
-    fs.createReadStream(filePath)
-      .pipe(csvParser())
-      .on("data", (row) => {
-        if (isFirstRow) {
-          const keys = Object.keys(row)[0].split(";");
-          const values = Object.values(row)[0].split(";");
-
-          jsonData.push(keys);
-          jsonData.push(values);
-        }
-
-        jsonData.push(Object.values(row)[0].split(";"));
-      })
-      .on("end", () => {
-        event.reply("excel-data", jsonData);
-      });
-  }
-});
-
-ipcMain.on("read-open-excel", async (event) => {
-  const { filePaths } = await dialog.showOpenDialog({
-    filters: [{ name: "Excel", extensions: ["xlsx", "csv"] }],
-  });
-
-  // User canceled the dialog
-  if (!filePaths && filePaths.length === 0) return;
-
-  // Store the opened file path
-  currentOpenedFilePath = filePaths[0];
-
-  const fileExtension = path.extname(currentOpenedFilePath);
-
-  if (fileExtension === ".xlsx") {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filePaths[0]);
-    const worksheet = workbook.worksheets[0];
-    const jsonData = [];
-    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-      // `.slice(1)` because exceljs includes an extra empty item at the start of the array
-      jsonData.push(row.values.slice(1));
-    });
-    // Assuming date is in column 4
-    const dateColumn = worksheet.getColumn(4);
-    dateColumn.numFmt = "dd-mm-yyyy";
-
-    // Sending data to renderer process
-    event.sender.send("file-data", jsonData);
-  } else if (fileExtension === ".csv") {
-    const jsonData = [];
-    const isFirstRow = true;
-    fs.createReadStream(filePaths[0])
-      .pipe(csvParser())
-      .on("data", (row) => {
-        if (isFirstRow) {
-          const keys = Object.keys(row)[0].split(";");
-          const values = Object.values(row)[0].split(";");
-
-          jsonData.push(keys);
-          jsonData.push(values);
-        }
-
-        jsonData.push(Object.values(row)[0].split(";"));
-      })
-      .on("end", () => {
-        // Sending data to renderer process
-        event.sender.send("file-data", jsonData);
-      });
-  }
-});
-
-// Existing File Update
-ipcMain.on("update-excel", async (event, tableData) => {
-  let filePath = currentOpenedFilePath;
-
-  if (!filePath) {
-    event.reply("update-response", {
-      status: "error",
-      message: "Create the file before update it",
-    });
-    return;
-  }
-
-  const tableValues = tableData.every(
-    (data) => !Object.values(data).every((value) => value === "")
-  );
-
-  const fileExtension = path.extname(filePath);
-
-  if (tableValues) {
-    if (fileExtension === ".xlsx") {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.worksheets[0];
-      worksheet.columns = Object.keys(tableData[0]).map((key) => ({
-        header: key,
-        key,
-      }));
-      tableData.forEach((item) => {
-        worksheet.addRow(item);
-      });
-      // Assuming date is in column 4
-      const dateColumn = worksheet.getColumn(4);
-      dateColumn.numFmt = "dd-mm-yyyy";
-      await workbook.xlsx.writeFile(filePath);
-      event.reply("update-response", {
-        status: "success",
-        message: "File updated successfully",
-      });
-    } else if (fileExtension === ".csv") {
-      const jsonData = [];
-      const isFirstRow = true;
-      fs.createReadStream(filePath)
-        .pipe(csvParser())
-        .on("data", (row) => {
-          if (isFirstRow) {
-            const keys = Object.keys(row)[0].split(";");
-            const values = Object.values(row)[0].split(";");
-
-            jsonData.push(keys);
-            jsonData.push(values);
-          }
-
-          jsonData.push(Object.values(row)[0].split(";"));
-        })
-        .on("end", () => {
-          // Sending data to renderer process
-          event.reply("update-response", {
-            status: "success",
-            message: "File updated successfully",
-          });
-        });
-    }
-  } else {
-    event.reply("update-response", {
-      status: "error",
-      message: "Don't remove all data from the table",
-    });
-  }
-});
-
-// New File Creation
-ipcMain.on("create-new-excel", async (event, tableData) => {
-  const tableValues = tableData.every(
-    (data) => !Object.values(data).every((value) => value === "")
-  );
-
-  if (tableValues) {
-    const saveDialog = await dialog.showSaveDialog({
-      filters: [{ name: "Excel", extensions: ["xlsx", "csv"] }],
-    });
-    let filePath = saveDialog.filePath;
-
-    if (!filePath) return;
-
-    const fileExtension = path.extname(filePath);
-
-    if (fileExtension === ".xlsx") {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Dogs");
-      worksheet.columns = Object.keys(tableData[0]).map((key) => ({
-        header: key,
-        key,
-      }));
-      tableData.forEach((item) => {
-        worksheet.addRow(item);
-      });
-      // Assuming date is in column 4
-      const dateColumn = worksheet.getColumn(4);
-      dateColumn.numFmt = "dd-mm-yyyy";
-      await workbook.xlsx.writeFile(filePath);
-      event.reply("create-response", {
-        status: "success",
-        message: "File created successfully",
-      });
-    } else if (fileExtension === ".csv") {
-      const header = Object.keys(tableData[0]).join(";");
-      const rows = tableData.map(row => Object.values(row).join(";"));
-      const csvData = [header, ...rows].join("\n");
-      fs.writeFileSync(filePath, csvData);
-      event.reply("create-response", {
-        status: "success",
-        message: "File created successfully",
-      });
-    }
-  } else {
-    event.reply("create-response", {
-      status: "error",
-      message: "Insert data before create it",
-    });
-  }
-});
-
 const createMenu = () => {
   const recentFiles = [];
   const openMenuItem = new MenuItem({
@@ -265,48 +34,12 @@ const createMenu = () => {
         filters: [{ name: "Excel", extensions: ["xlsx", "csv"] }],
       });
       if (filePaths.length) {
-        const fileExtension = path.extname(filePaths[0]);
-
-        if (fileExtension === ".xlsx") {
-          const workbook = new ExcelJS.Workbook();
-          await workbook.xlsx.readFile(filePaths[0]);
-          const worksheet = workbook.worksheets[0];
-          const jsonData = [];
-          worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-            // `.slice(1)` because exceljs includes an extra empty item at the start of the array
-            jsonData.push(row.values.slice(1));
-          });
-          // Assuming date is in column 4
-          const dateColumn = worksheet.getColumn(4);
-          dateColumn.numFmt = "dd-mm-yyyy";
-          // Send data to the renderer process or handle it
-          const allWindows = BrowserWindow.getAllWindows();
-          for (const window of allWindows) {
-            window.webContents.send("excel-data", jsonData);
-          }
-        } else if (fileExtension === ".csv") {
-          const jsonData = [];
-          const isFirstRow = true;
-          fs.createReadStream(filePaths[0])
-            .pipe(csvParser())
-            .on("data", (row) => {
-              if (isFirstRow) {
-                const keys = Object.keys(row)[0].split(";");
-                const values = Object.values(row)[0].split(";");
-
-                jsonData.push(keys);
-                jsonData.push(values);
-              }
-
-              jsonData.push(Object.values(row)[0].split(";"));
-            })
-            .on("end", () => {
-              // Send data to the renderer process or handle it
-              const allWindows = BrowserWindow.getAllWindows();
-              for (const window of allWindows) {
-                window.webContents.send("excel-data", jsonData);
-              }
-            });
+        // Read the file
+        const jsonData = await readFileContent(filePaths[0]);
+        // Send the data to the renderer process
+        const allWindows = BrowserWindow.getAllWindows();
+        for (const window of allWindows) {
+          window.webContents.send("excel-data", jsonData);
         }
         // Additionally, store this file in recentFiles and update the menu
         // Add to the start
@@ -369,6 +102,90 @@ app.whenReady().then(() => {
   });
 });
 
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
+
+// Event listeners
+
+let currentOpenedFilePath = "";
+
+ipcMain.on("read-excel", async (event, filePath) => {
+  const jsonData = await readFileContent(filePath);
+  currentOpenedFilePath = filePath;
+  event.reply("excel-data", jsonData);
+});
+
+ipcMain.on("read-open-excel", async (event) => {
+  const { filePaths } = await dialog.showOpenDialog({
+    filters: [{ name: "Excel", extensions: ["xlsx", "csv"] }],
+  });
+
+  // User canceled the dialog
+  if (!filePaths && filePaths.length === 0) return;
+
+  // Use the helper function for reading the file
+  const jsonData = await readFileContent(filePaths[0]);
+  currentOpenedFilePath = filePaths[0];
+  event.sender.send("file-data", jsonData);
+});
+
+ipcMain.on("update-excel", async (event, tableData) => {
+  if (!currentOpenedFilePath) {
+    event.reply("update-response", {
+      status: "error",
+      message: "Create the file before update it",
+    });
+    return;
+  }
+
+  const fileExtension = path.extname(currentOpenedFilePath);
+
+  // Use the appropriate helper function based on the file extension
+  if (fileExtension === ".xlsx") {
+    await updateExcelFile(currentOpenedFilePath, tableData);
+  } else if (fileExtension === ".csv") {
+    await handleCSVFile(currentOpenedFilePath, tableData);
+  }
+});
+
+ipcMain.on("create-new-excel", async (event, tableData) => {
+  const tableValues = tableData.every(
+    (data) => !Object.values(data).every((value) => value === "")
+  );
+
+  if (tableValues) {
+    const saveDialog = await dialog.showSaveDialog({
+      filters: [{ name: "Excel", extensions: ["xlsx", "csv"] }],
+    });
+    let filePath = saveDialog.filePath;
+
+    if (!filePath) return;
+
+    const fileExtension = path.extname(filePath);
+    // Use the appropriate helper function based on the file extension
+    if (fileExtension === ".xlsx") {
+      await createExcelFile(saveDialog.filePath, tableData);
+    } else if (fileExtension === ".csv") {
+      await handleCSVFile(saveDialog.filePath, tableData);
+    }
+  } else {
+    event.reply("create-response", {
+      status: "error",
+      message: "Insert data before create it",
+    });
+  }
+});
+
+ipcMain.handle("dark-mode:toggle", () => {
+  if (nativeTheme.shouldUseDarkColors) {
+    nativeTheme.themeSource = "light";
+  } else {
+    nativeTheme.themeSource = "dark";
+  }
+  return nativeTheme.shouldUseDarkColors;
+});
+
 ipcMain.on("ondragstart", (event, filePath) => {
   event.sender.startDrag({
     file: path.join(app.getAppPath(), filePath),
@@ -376,6 +193,62 @@ ipcMain.on("ondragstart", (event, filePath) => {
   });
 });
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
-});
+// Helper functions
+
+const readFileContent = async (filePath) => {
+  const fileExtension = path.extname(filePath);
+  const jsonData = [];
+
+  if (fileExtension === ".xlsx") {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    const worksheet = workbook.worksheets[0];
+    worksheet.eachRow({ includeEmpty: false }, (row) => {
+      jsonData.push(row.values.slice(1));
+    });
+  } else if (fileExtension === ".csv") {
+    await new Promise((resolve, reject) => {
+      fs.createReadStream(filePath)
+        .pipe(csvParser())
+        .on("data", (row) => {
+          jsonData.push(Object.values(row)[0].split(";"));
+        })
+        .on("end", resolve)
+        .on("error", reject);
+    });
+  }
+  return jsonData;
+};
+
+// TODO: fix helper functions
+const updateExcelFile = async (filePath, tableData) => {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
+  const worksheet = workbook.getWorksheet(1);
+  tableData.forEach((rowData, rowIndex) => {
+    const row = worksheet.getRow(rowIndex + 1);
+    rowData.forEach((cellData, cellIndex) => {
+      row.getCell(cellIndex + 1).value = cellData;
+    });
+    row.commit();
+  });
+  await workbook.xlsx.writeFile(filePath);
+};
+
+const handleCSVFile = async (filePath, tableData) => {
+  const csvData = tableData.map(row => row.join(";")).join("\n");
+  fs.writeFileSync(filePath, csvData);
+};
+
+const createExcelFile = async (filePath, tableData) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Dogs");
+  tableData.forEach((rowData, rowIndex) => {
+    const row = worksheet.getRow(rowIndex + 1);
+    rowData.forEach((cellData, cellIndex) => {
+      row.getCell(cellIndex + 1).value = cellData;
+    });
+    row.commit();
+  });
+  await workbook.xlsx.writeFile(filePath);
+};

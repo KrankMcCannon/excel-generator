@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld("electron", {
   updateExcelFile: (data) => {
     ipcRenderer.send("update-excel", data);
   },
-  createNewExcelFile: (data) => {
+  createExcelFile: (data) => {
     ipcRenderer.send("create-new-excel", data);
   },
   onUpdateResponse: (callback) => {
