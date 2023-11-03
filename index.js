@@ -139,13 +139,31 @@ ipcMain.on("update-excel", async (event, tableData) => {
     return;
   }
 
+  const tableValues = tableData.every(
+    (data) => !Object.values(data).every((value) => value === "")
+  );
+
   const fileExtension = path.extname(currentOpenedFilePath);
 
-  // Use the appropriate helper function based on the file extension
-  if (fileExtension === ".xlsx") {
-    await updateExcelFile(currentOpenedFilePath, tableData);
-  } else if (fileExtension === ".csv") {
-    await handleCSVFile(currentOpenedFilePath, tableData);
+  if (tableValues) {
+    if (fileExtension === ".xlsx") {
+      await updateExcelFile(currentOpenedFilePath, tableData);
+      event.reply("update-response", {
+        status: "success",
+        message: "File updated successfully",
+      });
+    } else if (fileExtension === ".csv") {
+      await handleCSVFile(currentOpenedFilePath, tableData);
+      event.reply("update-response", {
+        status: "success",
+        message: "File updated successfully",
+      });
+    }
+  } else {
+    event.reply("update-response", {
+      status: "error",
+      message: "Insert data before update it",
+    });
   }
 });
 
@@ -166,8 +184,16 @@ ipcMain.on("create-new-excel", async (event, tableData) => {
     // Use the appropriate helper function based on the file extension
     if (fileExtension === ".xlsx") {
       await createExcelFile(saveDialog.filePath, tableData);
+      event.reply("create-response", {
+        status: "success",
+        message: "File created successfully",
+      });
     } else if (fileExtension === ".csv") {
       await handleCSVFile(saveDialog.filePath, tableData);
+      event.reply("create-response", {
+        status: "success",
+        message: "File created successfully",
+      });
     }
   } else {
     event.reply("create-response", {
@@ -220,35 +246,39 @@ const readFileContent = async (filePath) => {
   return jsonData;
 };
 
-// TODO: fix helper functions
+// TODO: fix exceljs worksheet bug
 const updateExcelFile = async (filePath, tableData) => {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(filePath);
-  const worksheet = workbook.getWorksheet(1);
-  tableData.forEach((rowData, rowIndex) => {
-    const row = worksheet.getRow(rowIndex + 1);
-    rowData.forEach((cellData, cellIndex) => {
-      row.getCell(cellIndex + 1).value = cellData;
-    });
-    row.commit();
+  const worksheet = workbook.worksheets[0];
+  console.log('workbook', workbook);
+  console.log('worksheet', worksheet);
+  console.log('tableData', tableData);
+  worksheet.columns = Object.keys(tableData[0]).map((key) => ({
+    header: key,
+    key,
+  }));
+  tableData.forEach((item) => {
+    worksheet.addRow(item);
   });
   await workbook.xlsx.writeFile(filePath);
 };
 
 const handleCSVFile = async (filePath, tableData) => {
-  const csvData = tableData.map(row => row.join(";")).join("\n");
+  const header = Object.keys(tableData[0]).join(";");
+  const rows = tableData.map((row) => Object.values(row).join(";"));
+  const csvData = [header, ...rows].join("\n");
   fs.writeFileSync(filePath, csvData);
 };
 
 const createExcelFile = async (filePath, tableData) => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Dogs");
-  tableData.forEach((rowData, rowIndex) => {
-    const row = worksheet.getRow(rowIndex + 1);
-    rowData.forEach((cellData, cellIndex) => {
-      row.getCell(cellIndex + 1).value = cellData;
-    });
-    row.commit();
+  worksheet.columns = Object.keys(tableData[0]).map((key) => ({
+    header: key,
+    key,
+  }));
+  tableData.forEach((item) => {
+    worksheet.addRow(item);
   });
   await workbook.xlsx.writeFile(filePath);
 };
