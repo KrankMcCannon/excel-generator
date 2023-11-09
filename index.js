@@ -245,41 +245,22 @@ const readFileContent = async (filePath) => {
   return jsonData;
 };
 
-// TODO: fix error when update excel file the updates are saved at the end of the file and not overwrites the data
 const updateExcelFile = async (filePath, tableData) => {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(filePath);
-  const worksheet = workbook.worksheets[0];
-  // Assuming the first row contains headers
-  // Remove the first empty value which is an artifact of the library
-  const headers = worksheet.getRow(1).values.slice(1);
+  workbook.removeWorksheet(workbook.worksheets[0].id);
 
-  // Map the incoming data by a unique identifier (like an ID),
-  // assuming the first column in your data is a unique id.
-  const dataMap = new Map(tableData.map((item) => [item[headers[0]], item]));
+  const worksheet = workbook.addWorksheet("Dogs");
 
-  // Start processing from the second row, since the first row contains headers
-  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber === 1) return; // skip header row
+  const headers = Object.keys(tableData[0]);
+  worksheet.columns = headers.map((header) => ({ header: header, key: header }));
 
-    const rowId = row.getCell(1).value; // Unique identifier in the first cell
-    if (dataMap.has(rowId)) {
-      // Retrieve the data for this row ID
-      const dataObject = dataMap.get(rowId);
-      // Loop through each header and set the corresponding cell value
-      headers.forEach((header, index) => {
-        row.getCell(index + 1).value = dataObject[header]; // +1 as Excel rows are 1-indexed
-      });
-      dataMap.delete(rowId); // Remove the item from the map to avoid adding it later as a new row
-    }
+   // Write new rows with updated data
+   tableData.forEach((rowData) => {
+    worksheet.addRow(rowData).commit(); // rowData is an object where key is column header
   });
 
-  // Add new rows for any remaining items in the data map
-  dataMap.forEach((dataObject) => {
-    const newRowValues = headers.map((header) => dataObject[header]);
-    worksheet.addRow(newRowValues).commit(); // Add and commit the new row
-  });
-
+  // Save the workbook to the file
   await workbook.xlsx.writeFile(filePath);
 };
 
