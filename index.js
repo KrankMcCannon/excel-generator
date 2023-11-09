@@ -124,7 +124,6 @@ ipcMain.on("read-open-excel", async (event) => {
   // User canceled the dialog
   if (!filePaths && filePaths.length === 0) return;
 
-  // Use the helper function for reading the file
   const jsonData = await readFileContent(filePaths[0]);
   currentOpenedFilePath = filePaths[0];
   event.sender.send("file-data", jsonData);
@@ -181,7 +180,6 @@ ipcMain.on("create-new-excel", async (event, tableData) => {
     if (!filePath) return;
 
     const fileExtension = path.extname(filePath);
-    // Use the appropriate helper function based on the file extension
     if (fileExtension === ".xlsx") {
       await createExcelFile(saveDialog.filePath, tableData);
       event.reply("create-response", {
@@ -215,7 +213,6 @@ ipcMain.handle("dark-mode:toggle", () => {
 ipcMain.on("ondragstart", (event, filePath) => {
   event.sender.startDrag({
     file: path.join(app.getAppPath(), filePath),
-    icon: path.join(app.getAppPath(), "iconForDragAndDrop.png"),
   });
 });
 
@@ -243,23 +240,46 @@ const readFileContent = async (filePath) => {
         .on("error", reject);
     });
   }
+
+  console.log("jsonData", jsonData);
   return jsonData;
 };
 
-// TODO: fix exceljs worksheet bug
+// TODO: fix error when update excel file the updates are saved at the end of the file and not overwrites the data
 const updateExcelFile = async (filePath, tableData) => {
   const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
   const worksheet = workbook.worksheets[0];
-  console.log('workbook', workbook);
-  console.log('worksheet', worksheet);
-  console.log('tableData', tableData);
-  worksheet.columns = Object.keys(tableData[0]).map((key) => ({
-    header: key,
-    key,
-  }));
-  tableData.forEach((item) => {
-    worksheet.addRow(item);
+  // Assuming the first row contains headers
+  // Remove the first empty value which is an artifact of the library
+  const headers = worksheet.getRow(1).values.slice(1);
+
+  // Map the incoming data by a unique identifier (like an ID),
+  // assuming the first column in your data is a unique id.
+  const dataMap = new Map(tableData.map((item) => [item[headers[0]], item]));
+
+  // Start processing from the second row, since the first row contains headers
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber === 1) return; // skip header row
+
+    const rowId = row.getCell(1).value; // Unique identifier in the first cell
+    if (dataMap.has(rowId)) {
+      // Retrieve the data for this row ID
+      const dataObject = dataMap.get(rowId);
+      // Loop through each header and set the corresponding cell value
+      headers.forEach((header, index) => {
+        row.getCell(index + 1).value = dataObject[header]; // +1 as Excel rows are 1-indexed
+      });
+      dataMap.delete(rowId); // Remove the item from the map to avoid adding it later as a new row
+    }
   });
+
+  // Add new rows for any remaining items in the data map
+  dataMap.forEach((dataObject) => {
+    const newRowValues = headers.map((header) => dataObject[header]);
+    worksheet.addRow(newRowValues).commit(); // Add and commit the new row
+  });
+
   await workbook.xlsx.writeFile(filePath);
 };
 
