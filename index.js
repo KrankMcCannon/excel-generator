@@ -4,14 +4,11 @@ const {
   ipcMain,
   nativeTheme,
   dialog,
-  Menu,
-  MenuItem,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const ExcelJS = require("exceljs");
 const csvParser = require("csv-parser");
-// require('update-electron-app')(); // uncomment to enable auto-updates
 
 const createWindow = () => {
   const win = new BrowserWindow({
@@ -25,77 +22,8 @@ const createWindow = () => {
   win.loadFile("index.html");
 };
 
-const createMenu = () => {
-  const recentFiles = [];
-  const openMenuItem = new MenuItem({
-    label: "Open...",
-    click: async () => {
-      const { filePaths } = await dialog.showOpenDialog({
-        filters: [{ name: "Excel", extensions: ["xlsx", "csv"] }],
-      });
-      if (filePaths.length) {
-        // Read the file
-        const jsonData = await readFileContent(filePaths[0]);
-        // Send the data to the renderer process
-        const allWindows = BrowserWindow.getAllWindows();
-        for (const window of allWindows) {
-          window.webContents.send("excel-data", jsonData);
-        }
-        // Additionally, store this file in recentFiles and update the menu
-        // Add to the start
-        recentFiles.unshift(filePaths[0]);
-        // Keep recent 5 files
-        if (recentFiles.length > 5) recentFiles.pop();
-        // Recreate the menu
-        createMenu();
-      }
-    },
-  });
-
-  const recentMenuItems = recentFiles.map((file) => ({
-    label: `Open Recent: ${path.basename(file)}`,
-    click: async () => {
-      ipcMain.emit("read-excel", null, file);
-    },
-  }));
-
-  const devToolsMenuItem = new MenuItem({
-    label: "Toggle DevTools",
-    // Common shortcut for DevTools
-    accelerator: process.platform === "darwin" ? "Cmd+Alt+I" : "Ctrl+Shift+I",
-    click: () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) focusedWindow.webContents.toggleDevTools();
-    },
-  });
-
-  const reloadMenuItem = new MenuItem({
-    label: "Reload",
-    // Common shortcut for reloading
-    accelerator: process.platform === "darwin" ? "Cmd+R" : "Ctrl+R",
-    click: () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) focusedWindow.reload();
-    },
-  });
-
-  const template = [
-    {
-      label: "File",
-      submenu: [openMenuItem, { type: "separator" }, ...recentMenuItems],
-    },
-    {
-      label: "View",
-      submenu: [devToolsMenuItem, reloadMenuItem],
-    },
-  ];
-
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-};
-
 app.whenReady().then(() => {
   createWindow();
-  createMenu();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -110,23 +38,23 @@ app.on("window-all-closed", () => {
 
 let currentOpenedFilePath = "";
 
+ipcMain.on("open-file-dialog", async (event) => {
+  const { filePaths } = await dialog.showOpenDialog({
+    properties: ["openFile"],
+    filters: [{ name: "Excel", extensions: ["xlsx", "csv"] }],
+  });
+
+  if (filePaths && filePaths.length > 0) {
+    currentOpenedFilePath = filePaths[0];
+    const fileContent = await readFileContent(filePaths[0]);
+    event.sender.send("excel-data", fileContent);
+  }
+});
+
 ipcMain.on("read-excel", async (event, filePath) => {
   const jsonData = await readFileContent(filePath);
   currentOpenedFilePath = filePath;
   event.reply("excel-data", jsonData);
-});
-
-ipcMain.on("read-open-excel", async (event) => {
-  const { filePaths } = await dialog.showOpenDialog({
-    filters: [{ name: "Excel", extensions: ["xlsx", "csv"] }],
-  });
-
-  // User canceled the dialog
-  if (!filePaths && filePaths.length === 0) return;
-
-  const jsonData = await readFileContent(filePaths[0]);
-  currentOpenedFilePath = filePaths[0];
-  event.sender.send("file-data", jsonData);
 });
 
 ipcMain.on("update-excel", async (event, tableData) => {
@@ -219,67 +147,103 @@ ipcMain.on("ondragstart", (event, filePath) => {
 // Helper functions
 
 const readFileContent = async (filePath) => {
-  const fileExtension = path.extname(filePath);
-  const jsonData = [];
+  try {
+    const fileExtension = path.extname(filePath);
+    const jsonData = [];
 
-  if (fileExtension === ".xlsx") {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filePath);
-    const worksheet = workbook.worksheets[0];
-    worksheet.eachRow({ includeEmpty: false }, (row) => {
-      jsonData.push(row.values.slice(1));
-    });
-  } else if (fileExtension === ".csv") {
-    await new Promise((resolve, reject) => {
-      fs.createReadStream(filePath)
-        .pipe(csvParser())
-        .on("data", (row) => {
-          jsonData.push(Object.values(row)[0].split(";"));
-        })
-        .on("end", resolve)
-        .on("error", reject);
-    });
+    if (fileExtension === ".xlsx") {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(filePath);
+      const worksheet = workbook.worksheets[0];
+
+      let headers = [];
+      let isHeaderProcessed = false;
+
+      worksheet.eachRow((row) => {
+        if (!isHeaderProcessed) {
+          // Assuming the first row contains headers
+          headers = row.values.slice(1); // Remove the first empty element
+          isHeaderProcessed = true;
+        } else {
+          const rowObject = {};
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            rowObject[headers[colNumber - 1]] = cell.value;
+          });
+          jsonData.push(rowObject);
+        }
+      });
+    } else if (fileExtension === ".csv") {
+      await new Promise((resolve, reject) => {
+        fs.createReadStream(filePath)
+          .pipe(csvParser({ separator: ";" }))
+          .on("data", (row) => {
+            jsonData.push(row);
+          })
+          .on("end", resolve)
+          .on("error", reject);
+      });
+    }
+
+    return jsonData;
+  } catch (error) {
+    console.log(error);
+    throw new Error("Error while reading the file");
   }
-
-  console.log("jsonData", jsonData);
-  return jsonData;
 };
 
 const updateExcelFile = async (filePath, tableData) => {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(filePath);
-  workbook.removeWorksheet(workbook.worksheets[0].id);
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+    workbook.removeWorksheet(workbook.worksheets[0].id);
 
-  const worksheet = workbook.addWorksheet("Dogs");
+    const worksheet = workbook.addWorksheet("Dogs");
 
-  const headers = Object.keys(tableData[0]);
-  worksheet.columns = headers.map((header) => ({ header: header, key: header }));
+    const headers = Object.keys(tableData[0]);
+    worksheet.columns = headers.map((header) => ({
+      header: header,
+      key: header,
+    }));
 
-   // Write new rows with updated data
-   tableData.forEach((rowData) => {
-    worksheet.addRow(rowData).commit(); // rowData is an object where key is column header
-  });
+    // Write new rows with updated data
+    tableData.forEach((rowData) => {
+      worksheet.addRow(rowData).commit(); // rowData is an object where key is column header
+    });
 
-  // Save the workbook to the file
-  await workbook.xlsx.writeFile(filePath);
+    // Save the workbook to the file
+    await workbook.xlsx.writeFile(filePath);
+  } catch (error) {
+    console.log(error);
+    throw new Error("Error while updating the file");
+  }
 };
 
 const handleCSVFile = async (filePath, tableData) => {
-  const header = Object.keys(tableData[0]).join(";");
-  const rows = tableData.map((row) => Object.values(row).join(";"));
-  const csvData = [header, ...rows].join("\n");
-  fs.writeFileSync(filePath, csvData);
+  try {
+    const header = Object.keys(tableData[0]).join(";");
+    const rows = tableData.map((row) => Object.values(row).join(";"));
+    const csvData = [header, ...rows].join("\n");
+    fs.writeFileSync(filePath, csvData);
+  } catch (error) {
+    console.log(error);
+    throw new Error("Error while updating the file");
+  }
 };
 
 const createExcelFile = async (filePath, tableData) => {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Dogs");
-  worksheet.columns = Object.keys(tableData[0]).map((key) => ({
-    header: key,
-    key,
-  }));
-  tableData.forEach((item) => {
-    worksheet.addRow(item);
-  });
-  await workbook.xlsx.writeFile(filePath);
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Dogs");
+    worksheet.columns = Object.keys(tableData[0]).map((key) => ({
+      header: key,
+      key,
+    }));
+    tableData.forEach((item) => {
+      worksheet.addRow(item);
+    });
+    await workbook.xlsx.writeFile(filePath);
+  } catch (error) {
+    console.log(error);
+    throw new Error("Error while creating the file");
+  }
 };

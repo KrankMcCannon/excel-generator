@@ -14,15 +14,16 @@
   <h1>Toilettatura di Michele Marullo! 👋</h1>
   <p>Attualmente stai usando lo stile: <strong id="theme-source">Dark</strong></p>
 
-  <button id="toggle-dark-mode">Dark Mode - Light Mode</button>
+  <button id="toggle-dark-mode" aria-label="Toggle Dark Mode">Dark Mode - Light Mode</button>
+  <button id="open-file" aria-label="Open File">Open File</button>
 
   <div draggable="true" id="drag">Porta qui il file excel per leggerlo</div>
-  <button id="prepare-table">Prepara il file excel</button>
+  <button id="prepare-table" aria-label="Prepare Table">Prepara il file excel</button>
   <div id="app-message" class="app-message-hidden"></div>
   <table id="excel-data"></table>
-  <button id="add-row">Aggiungi una nuova riga</button>
-  <button id="update-table">Aggiorna il file</button>
-  <button id="create-table">Crea il file</button>
+  <button id="add-row" aria-label="Add Row">Aggiungi una nuova riga</button>
+  <button id="update-table" aria-label="Update Table">Aggiorna il file</button>
+  <button id="create-table" aria-label="Create Table">Crea il file</button>
 </body>
 
 <script src="./renderer.js"></script>

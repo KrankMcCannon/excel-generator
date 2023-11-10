@@ -1,23 +1,45 @@
 // Event listeners
 
-document
-  .getElementById("toggle-dark-mode")
-  .addEventListener("click", async () => {
+const toggleDarkModeButton = document.getElementById("toggle-dark-mode");
+if (toggleDarkModeButton) {
+  toggleDarkModeButton.addEventListener("click", async () => {
     const isDarkMode = await window.darkMode.toggle();
     document.getElementById("theme-source").innerText = isDarkMode
       ? "Dark"
       : "Light";
   });
+}
+
+const openFileButton = document.getElementById('open-file');
+if (openFileButton) {
+  openFileButton.addEventListener('click', () => {
+    window.electron.openFile();
+  });
+}
 
 const dropZone = document.getElementById("drag");
-["dragover", "dragenter", "drop"].forEach((eventType) => {
-  dropZone.addEventListener(eventType, preventDefaultActions);
-});
+if (dropZone) {
+  ["dragover", "dragenter", "drop"].forEach((eventType) => {
+    dropZone.addEventListener(eventType, preventDefaultActions);
+  });
 
-dropZone.addEventListener("drop", (e) => {
-  const filePath = e.dataTransfer.files[0].path;
-  window.electron.readExcel(filePath);
-});
+  dropZone.addEventListener("drop", (e) => {
+    const filePath = e.dataTransfer.files[0].path;
+    window.electron.readExcel(filePath);
+  });
+}
+
+const removeRowButton = document.getElementById('excel-data');
+if (removeRowButton) {
+  removeRowButton.addEventListener('click', (event) => {
+    if (event.target && event.target.classList.contains('remove-row')) {
+      const rowElement = event.target.closest('tr');
+      if (rowElement) {
+        rowElement.remove();
+      }
+    }
+  });
+}
 
 window.electron.onExcelData((data) => {
   const table = processTableData(data);
@@ -33,52 +55,68 @@ window.electron.onExcelData((data) => {
   document.getElementById("add-row").style.display = "block";
 });
 
-document.getElementById("prepare-table").addEventListener("click", () => {
-  const headers = [
-    "cane",
-    "proprietario",
-    "telefono",
-    "razza",
-    "data_ultimo_taglio",
-    "data_prossimo_taglio",
-    "servizio",
-    "prezzo",
-    "note",
-  ].map((header) =>
-    header
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ")
-  );
+const prepareTableButton = document.getElementById("prepare-table");
+if (prepareTableButton) {
+  prepareTableButton.addEventListener("click", () => {
+    const headers = [
+      "cane",
+      "proprietario",
+      "telefono",
+      "razza",
+      "data_ultimo_taglio",
+      "data_prossimo_taglio",
+      "servizio",
+      "prezzo",
+      "note",
+    ].map((header) =>
+      header
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")
+    );
 
-  document.getElementById("excel-data").innerHTML = generateTableHTML(headers);
-  ["add-row", "create-table"].forEach((id) => {
-    document.getElementById(id).style.display = "block";
+    document.getElementById("excel-data").innerHTML = generateTableHTML(headers);
+    ["add-row", "create-table"].forEach((id) => {
+      document.getElementById(id).style.display = "block";
+    });
+    document.getElementById("prepare-table").style.display = "none";
   });
-  document.getElementById("prepare-table").style.display = "none";
-});
+}
 
-document.getElementById("add-row").addEventListener("click", () => {
-  const table = document.getElementById("excel-data").querySelector("tbody");
-  const newRow = table.insertRow();
+const addRowButton = document.getElementById("add-row");
+if (addRowButton) {
+  addRowButton.addEventListener("click", () => {
+    const table = document.getElementById("excel-data").querySelector("tbody");
+    const newRow = table.insertRow();
 
-  for (let i = 0; i < table.parentElement.rows[0].cells.length; i++) {
-    const cell = newRow.insertCell(i);
-    cell.contentEditable = "true";
-  }
-});
+    for (let i = 0; i < table.parentElement.rows[0].cells.length; i++) {
+      const cell = newRow.insertCell(i);
+      if (i !== table.parentElement.rows[0].cells.length - 1) {
+        cell.contentEditable = "true";
+      } else {
+        cell.innerHTML = `<button class="remove-row">Rimuovi</button>`;
+      }
+    }
+  });
+}
 
-document.getElementById("update-table").addEventListener("click", () => {
-  const table = document.getElementById("excel-data");
-  const data = processTableData(table);
-  window.electron.updateExcelFile(data);
-});
+const updateTableButton = document.getElementById("update-table");
+if (updateTableButton) {
+  updateTableButton.addEventListener("click", () => {
+    const table = document.getElementById("excel-data");
+    const data = processTableData(table);
+    window.electron.updateExcelFile(data);
+  });
+}
 
-document.getElementById("create-table").addEventListener("click", () => {
-  const table = document.getElementById("excel-data");
-  const data = processTableData(table);
-  window.electron.createExcelFile(data);
-});
+const createTableButton = document.getElementById("create-table");
+if (createTableButton) {
+  createTableButton.addEventListener("click", () => {
+    const table = document.getElementById("excel-data");
+    const data = processTableData(table);
+    window.electron.createExcelFile(data);
+  });
+}
 
 ["onUpdateResponse", "onCreateResponse"].forEach((eventType) => {
   window.electron[eventType]((response) => {
@@ -94,12 +132,12 @@ function preventDefaultActions(e) {
 }
 
 function generateTableHTML(headers, data = []) {
-  console.log(headers, data);
   let tableHTML = "<thead><tr>";
 
   headers.forEach((header) => {
     tableHTML += `<th>${header}</th>`;
   });
+  tableHTML += '<th>Azioni</th>';
   tableHTML += "</tr></thead><tbody>";
 
   if (data.length > 0) {
@@ -108,6 +146,7 @@ function generateTableHTML(headers, data = []) {
       headers.forEach((header) => {
         tableHTML += `<td contenteditable='true'>${row[header] || ""}</td>`;
       });
+      tableHTML += `<td><button class="remove-row">Rimuovi</button></td>`;
       tableHTML += "</tr>";
     });
   } else {
@@ -115,6 +154,7 @@ function generateTableHTML(headers, data = []) {
     headers.forEach(() => {
       tableHTML += `<td contenteditable='true'></td>`;
     });
+    tableHTML += `<td><button class="remove-row">Rimuovi</button></td>`;
     tableHTML += "</tr>";
   }
 
@@ -123,30 +163,26 @@ function generateTableHTML(headers, data = []) {
 }
 
 function processTableData(table) {
-  if (table.rows?.length > 0) {
-    const headers = Array.from(table.rows[0].cells).map(
-      (cell) => cell.textContent
-    );
-    const rows = Array.from(table.rows).slice(1);
-
-    return rows.map((row) => {
-      const rowData = {};
-      headers.forEach((header, index) => {
-        rowData[header] = row.cells[index].textContent;
+  if (table.innerHTML) {
+    const tableBody = table.innerHTML.match(/<tbody>(.*)<\/tbody>/);
+    const tableRows = tableBody[1].match(/<tr>(.*?)<\/tr>/g);
+    const tableHeaders = table.innerHTML.match(/<thead>(.*?)<\/thead>/);
+    const tableHeadersRows = tableHeaders[1].match(/<th>(.*?)<\/th>/g);
+    const tableHeadersText = tableHeadersRows.map((item) => item.replace(/<th>|<\/th>/g, ''));
+    const tableObject = tableRows.map((row) => {
+      const rowCells = row.match(/<td.*?>(.*?)<\/td>/g);
+      const rowCellsText = rowCells.map((item) => item.replace(/<td.*?>|<\/td>/g, ''));
+      const rowObject = {};
+      rowCellsText.forEach((item, index) => {
+        if (tableHeadersText[index] !== 'Actions') {
+          rowObject[tableHeadersText[index]] = item;
+        }
       });
-      return rowData;
+      return rowObject;
     });
+    return tableObject;
   } else {
-    const headers = table[0];
-    const rows = table.slice(1);
-
-    return rows.map((row) => {
-      const rowData = {};
-      headers.forEach((header, index) => {
-        rowData[header] = row[index];
-      });
-      return rowData;
-    });
+    return table;
   }
 }
 
