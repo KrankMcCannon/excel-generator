@@ -71,7 +71,7 @@ if (prepareTableButton) {
     );
 
     document.getElementById("excel-data").innerHTML = generateTableHTML(headers);
-    ["add-row", "create-table"].forEach((id) => {
+    ["add-row", "create-table", "return-home"].forEach((id) => {
       document.getElementById(id).style.display = "block";
     });
     document.getElementById("prepare-table").style.display = "none";
@@ -113,6 +113,16 @@ if (createTableButton) {
   });
 }
 
+const returnHomeButton = document.getElementById("return-home");
+if (returnHomeButton) {
+  returnHomeButton.addEventListener("click", () => {
+    document.getElementById("excel-data").innerHTML = '';
+    ["prepare-table", "return-home", "create-table", "update-table", "add-row"].forEach((id) => {
+      document.getElementById(id).style.display = id === "prepare-table" ? "block" : "none";
+    });
+  });
+}
+
 // After the table is generated and added to the DOM:
 document.querySelectorAll('.add-column-btn').forEach(btn => {
   btn.addEventListener('click', addColumn);
@@ -130,6 +140,7 @@ window.electron.onExcelData((data) => {
       id === "update-table" ? "block" : "none";
   });
   document.getElementById("add-row").style.display = "block";
+  document.getElementById("return-home").style.display = "block";
 });
 
 ["onUpdateResponse", "onCreateResponse"].forEach((eventType) => {

@@ -80,3 +80,7 @@ button:hover {
 .app-message-visible {
   display: block;
 }
+
+#return-home {
+  display: none;
+}
