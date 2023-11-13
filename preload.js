@@ -26,7 +26,3 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.on("create-response", (event, data) => callback(data));
   },
 });
-
-contextBridge.exposeInMainWorld("darkMode", {
-  toggle: () => ipcRenderer.invoke("dark-mode:toggle"),
-});

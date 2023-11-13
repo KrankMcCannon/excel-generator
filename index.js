@@ -61,7 +61,7 @@ ipcMain.on("update-excel", async (event, tableData) => {
   if (!currentOpenedFilePath) {
     event.reply("update-response", {
       status: "error",
-      message: "Create the file before update it",
+      message: "C'è stato un errore nel caricamento del file",
     });
     return;
   }
@@ -77,19 +77,19 @@ ipcMain.on("update-excel", async (event, tableData) => {
       await updateExcelFile(currentOpenedFilePath, tableData);
       event.reply("update-response", {
         status: "success",
-        message: "File updated successfully",
+        message: "File aggiornato con successo",
       });
     } else if (fileExtension === ".csv") {
       await handleCSVFile(currentOpenedFilePath, tableData);
       event.reply("update-response", {
         status: "success",
-        message: "File updated successfully",
+        message: "File aggiornato con successo",
       });
     }
   } else {
     event.reply("update-response", {
       status: "error",
-      message: "Insert data before update it",
+      message: "Inserisci i dati prima di aggiornare il file",
     });
   }
 });
@@ -112,30 +112,21 @@ ipcMain.on("create-new-excel", async (event, tableData) => {
       await createExcelFile(saveDialog.filePath, tableData);
       event.reply("create-response", {
         status: "success",
-        message: "File created successfully",
+        message: "File creato con successo",
       });
     } else if (fileExtension === ".csv") {
       await handleCSVFile(saveDialog.filePath, tableData);
       event.reply("create-response", {
         status: "success",
-        message: "File created successfully",
+        message: "File creato con successo",
       });
     }
   } else {
     event.reply("create-response", {
       status: "error",
-      message: "Insert data before create it",
+      message: "Inserisci i dati prima di creare il file",
     });
   }
-});
-
-ipcMain.handle("dark-mode:toggle", () => {
-  if (nativeTheme.shouldUseDarkColors) {
-    nativeTheme.themeSource = "light";
-  } else {
-    nativeTheme.themeSource = "dark";
-  }
-  return nativeTheme.shouldUseDarkColors;
 });
 
 ipcMain.on("ondragstart", (event, filePath) => {

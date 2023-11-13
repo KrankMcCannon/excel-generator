@@ -1,86 +1,185 @@
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #333;
-    color: white;
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  body {
-    background: #ddd;
-    color: black;
-  }
-}
-
+/* Global Styles */
 body {
   font-family: "Arial", sans-serif;
+  background-color: #1a1a1a;
+  color: #f0f0f0;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+/* Header Styles */
+header {
+  width: 95%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 40px 0px;
 }
 
-th {
-  font-size: 1.2em;
-  background-color: #f2f2f2;
-  color: black;
-  position: relative; /* Required for absolute positioning of the button */
+.title-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-bottom: 1em;
 }
 
-.add-column-btn {
-  position: absolute;
-  display: none;
+#date-time-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%; /* This will align them on top of the buttons */
+  margin-bottom: 0.5em; /* Space between date-time and buttons */
+}
+
+#date-display, #clock-display {
+  background-color: #333;
+  padding: 8px 16px;
+  border-radius: 10px;
+  margin: 0 5px;
+  font-size: 0.9em;
+}
+
+/* Button Styles */
+button {
+  background-color: #28a745; /* Bootstrap's btn-success color */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  margin: 5px;
+  border-radius: 5px;
+  font-size: 1em;
   cursor: pointer;
-  top: 0;
-  right: 0;
+  transition: background-color 0.3s, transform 0.1s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+button:hover {
+  background-color: #218838; /* A darker green for hover state */
+  transform: translateY(-2px); /* Slight raise effect on hover */
+}
+
+/* Special button styles for add-column-btn */
+.add-column-btn {
+  display: none;
+  background-color: #f0f0f0;
+  color: #333;
+  padding: 0px 6px;
+  margin: 0px 0px 0px 5px;
+  font-size: 0.8em;
+}
+
+.add-column-btn:hover {
+  background-color: #f0f0f0; /* A darker green for hover state */
+  transform: translateY(-2px); /* Slight raise effect on hover */
 }
 
 th:hover .add-column-btn {
   display: inline;
 }
 
-th, td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
-}
-
-tr:nth-child(even) {
-  background-color: #707070f5;
-}
-
-button:hover {
-  background-color: #f2f2f2;
-  cursor: pointer;
-}
-
+/* Drag and Drop Area Styles */
 #drag {
-  border: 2px solid black;
-  border-radius: 3px;
-  padding: 5px;
-  margin: 20px 0;
+  border: 2px dashed #28a745;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px;
+  text-align: center;
+  width: 90%; /* Match table width */
+  transition: background-color 0.3s;
 }
 
-#add-row, #update-table, #create-table {
+#drag:hover {
+  background-color: rgba(40, 167, 69, 0.1); /* Slight highlight on hover */
+}
+
+/* Table Styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px auto;
+  background-color: #f2f2f2;
+  color: #333;
+}
+
+th, td {
+  padding: 10px 15px;
+  border: 1px solid #404040; /* Darker border color for better contrast */
+  border-bottom: 1px solid #606060; /* Slightly lighter border for the bottom to distinguish between rows */
+}
+
+/* Additional styling for header cells if needed */
+th {
+  background-color: #f2f2f2;
+  color: black;
+}
+
+/* Zebra Striping for table rows */
+tr:nth-child(odd) { /* targeting odd rows for one color */
+  background-color: #ddd;
+}
+
+tr:nth-child(even) { /* targeting even rows for another color */
+  background-color: #eee;
+}
+
+/* Hide buttons initially and show them when needed */
+#add-row, #update-table, #create-table, #return-home {
   display: none;
+}
+
+/* Remove Row Button Styles */
+.remove-row {
+  color: white;
+  background: #dc3545; /* Bootstrap's btn-danger color */
+  cursor: pointer;
+  margin: 0px 10%;
+}
+
+.remove-row:hover {
+  background: #c82333; /* A darker red for hover state */
+}
+
+.remove-row:hover {
+  text-decoration: underline;
+}
+
+/* Message Box Styles */
+.app-message-visible, .app-message-hidden {
+  padding: 10px;
+  border-radius: 5px;
+  background-color: #28a745;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin: 15px 0; /* Adds space above and below the message box */
+  text-align: center; /* Centers the text inside the message box */
+  width: 50%; /* Match the width of the table and drag area */
+  transition: all 0.3s ease; /* Smooth transition for showing and hiding */
 }
 
 .app-message-hidden {
-  display: none;
-  border: 1px solid #aaa;
-  padding: 8px;
-  background-color: #f4f4f4;
-  margin: 10px 0;
-  border-radius: 4px;
+  display: none; /* Keep it hidden by default */
 }
 
-.app-message-visible {
-  display: block;
-}
+/* Responsive Design */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+  }
 
-#return-home {
-  display: none;
+  .title-clock {
+    align-items: center;
+  }
+
+  #date-time-container {
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 0.5em;
+  }
+
+  button {
+    padding: 8px 16px;
+  }
 }

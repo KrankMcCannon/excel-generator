@@ -1,15 +1,5 @@
 // Event listeners
 
-const toggleDarkModeButton = document.getElementById("toggle-dark-mode");
-if (toggleDarkModeButton) {
-  toggleDarkModeButton.addEventListener("click", async () => {
-    const isDarkMode = await window.darkMode.toggle();
-    document.getElementById("theme-source").innerText = isDarkMode
-      ? "Dark"
-      : "Light";
-  });
-}
-
 const openFileButton = document.getElementById('open-file');
 if (openFileButton) {
   openFileButton.addEventListener('click', () => {
@@ -236,7 +226,7 @@ function addColumn(event) {
   // Insert new header cell
   const newHeaderCell = document.createElement("th");
   newHeaderCell.contentEditable = "true"; // Make it editable for naming
-  newHeaderCell.innerText = "New Column"; // Placeholder text, user can change it
+  newHeaderCell.innerText = "Nuova Colonna"; // Placeholder text, user can change it
   headersRow.insertBefore(newHeaderCell, clickedHeader.nextSibling);
 
   // Insert new cells in body rows
@@ -254,3 +244,19 @@ function createAddColumnButton() {
   button.addEventListener("click", addColumn);
   return button;
 }
+
+function updateDateAndTime() {
+  const now = new Date();
+
+  // Update Date
+  const dateString = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('date-display').textContent = dateString;
+
+  // Update Time
+  const timeString = now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('clock-display').textContent = timeString;
+}
+
+// Initialize and set the interval to update every second
+updateDateAndTime();
+setInterval(updateDateAndTime, 60000);

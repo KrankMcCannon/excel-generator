@@ -11,13 +11,21 @@
 </head>
 
 <body>
-  <h1>Toilettatura di Michele Marullo! 👋</h1>
-  <button id="open-file" aria-label="Open File">Open File</button>
-  <button id="return-home" aria-label="Return Home">Return Home</button>
+  <header>
+    <h1>Toilettatura di Michele Marullo! 👋</h1>
+    <div class="title-clock">
+      <div id="date-time-container">
+        <div id="date-display"></div>
+        <div id="clock-display"></div>
+      </div>
+      <button id="open-file" aria-label="Open File">Apri il File</button>
+      <button id="return-home" aria-label="Return Home">Ritorna alla Home</button>
+    </div>
+  </header>
 
   <div draggable="true" id="drag">Porta qui il file excel per leggerlo</div>
-  <button id="prepare-table" aria-label="Prepare Table">Prepara il file excel</button>
   <div id="app-message" class="app-message-hidden"></div>
+  <button id="prepare-table" aria-label="Prepare Table">Prepara il file excel</button>
   <table id="excel-data"></table>
   <button id="add-row" aria-label="Add Row">Aggiungi una nuova riga</button>
   <button id="update-table" aria-label="Update Table">Aggiorna il file</button>
