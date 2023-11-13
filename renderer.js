@@ -41,19 +41,14 @@ if (removeRowButton) {
   });
 }
 
-window.electron.onExcelData((data) => {
-  const table = processTableData(data);
-  const headers = Object.keys(table[0]);
-  document.getElementById("excel-data").innerHTML = generateTableHTML(
-    headers,
-    table
-  );
-  ["update-table", "prepare-table", "create-table"].forEach((id) => {
-    document.getElementById(id).style.display =
-      id === "update-table" ? "block" : "none";
+const addColumnButton = document.getElementById('excel-data');
+if (addColumnButton) {
+  addColumnButton.addEventListener('click', (event) => {
+    if (event.target && event.target.classList.contains('add-column-btn')) {
+      addColumn(event);
+    }
   });
-  document.getElementById("add-row").style.display = "block";
-});
+}
 
 const prepareTableButton = document.getElementById("prepare-table");
 if (prepareTableButton) {
@@ -118,6 +113,25 @@ if (createTableButton) {
   });
 }
 
+// After the table is generated and added to the DOM:
+document.querySelectorAll('.add-column-btn').forEach(btn => {
+  btn.addEventListener('click', addColumn);
+});
+
+window.electron.onExcelData((data) => {
+  const table = processTableData(data);
+  const headers = Object.keys(table[0]);
+  document.getElementById("excel-data").innerHTML = generateTableHTML(
+    headers,
+    table
+  );
+  ["update-table", "prepare-table", "create-table"].forEach((id) => {
+    document.getElementById(id).style.display =
+      id === "update-table" ? "block" : "none";
+  });
+  document.getElementById("add-row").style.display = "block";
+});
+
 ["onUpdateResponse", "onCreateResponse"].forEach((eventType) => {
   window.electron[eventType]((response) => {
     showMessage(response.message);
@@ -135,7 +149,7 @@ function generateTableHTML(headers, data = []) {
   let tableHTML = "<thead><tr>";
 
   headers.forEach((header) => {
-    tableHTML += `<th>${header}</th>`;
+    tableHTML += `<th>${header} <button class="add-column-btn">+</button></th>`;
   });
   tableHTML += '<th>Azioni</th>';
   tableHTML += "</tr></thead><tbody>";
@@ -163,24 +177,26 @@ function generateTableHTML(headers, data = []) {
 }
 
 function processTableData(table) {
-  if (table.innerHTML) {
-    const tableBody = table.innerHTML.match(/<tbody>(.*)<\/tbody>/);
-    const tableRows = tableBody[1].match(/<tr>(.*?)<\/tr>/g);
-    const tableHeaders = table.innerHTML.match(/<thead>(.*?)<\/thead>/);
-    const tableHeadersRows = tableHeaders[1].match(/<th>(.*?)<\/th>/g);
-    const tableHeadersText = tableHeadersRows.map((item) => item.replace(/<th>|<\/th>/g, ''));
-    const tableObject = tableRows.map((row) => {
-      const rowCells = row.match(/<td.*?>(.*?)<\/td>/g);
-      const rowCellsText = rowCells.map((item) => item.replace(/<td.*?>|<\/td>/g, ''));
-      const rowObject = {};
-      rowCellsText.forEach((item, index) => {
-        if (tableHeadersText[index] !== 'Actions') {
-          rowObject[tableHeadersText[index]] = item;
-        }
+  if (table instanceof HTMLElement && table.innerHTML) {
+    const headers = Array
+    .from(table.querySelectorAll("thead th"))
+    .slice(0, -1) // Exclude the 'Actions' column
+    .map(th => th.childNodes[0].nodeValue.trim()); // Get only the text, excluding the button
+
+  return Array
+    .from(table.querySelectorAll("tbody tr"))
+    .map(row => {
+      const rowData = {};
+      const cells = Array
+        .from(row.cells)
+        .slice(0, -1); // Exclude the 'Actions' column
+
+      cells.forEach((cell, index) => {
+        rowData[headers[index]] = cell.textContent.trim(); // Get text content of each cell
       });
-      return rowObject;
+
+      return rowData;
     });
-    return tableObject;
   } else {
     return table;
   }
@@ -196,4 +212,34 @@ function showMessage(message) {
     messageBox.classList.toggle("app-message-visible", false);
     messageBox.classList.toggle("app-message-hidden", true);
   }, 5000);
+}
+
+function addColumn(event) {
+  const clickedButton = event.target;
+  const clickedHeader = clickedButton.closest('th');
+  const headersRow = clickedHeader.parentNode;
+  const table = headersRow.closest('table');
+  const bodyRows = table.querySelectorAll("tbody tr");
+  const columnIndex = Array.from(headersRow.children).indexOf(clickedHeader);
+
+  // Insert new header cell
+  const newHeaderCell = document.createElement("th");
+  newHeaderCell.contentEditable = "true"; // Make it editable for naming
+  newHeaderCell.innerText = "New Column"; // Placeholder text, user can change it
+  headersRow.insertBefore(newHeaderCell, clickedHeader.nextSibling);
+
+  // Insert new cells in body rows
+  bodyRows.forEach(row => {
+    const newCell = document.createElement("td");
+    newCell.contentEditable = "true";
+    row.insertBefore(newCell, row.children[columnIndex + 1]);
+  });
+}
+
+function createAddColumnButton() {
+  const button = document.createElement("button");
+  button.className = "add-column-btn";
+  button.textContent = "+";
+  button.addEventListener("click", addColumn);
+  return button;
 }

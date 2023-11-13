@@ -27,6 +27,19 @@ th {
   font-size: 1.2em;
   background-color: #f2f2f2;
   color: black;
+  position: relative; /* Required for absolute positioning of the button */
+}
+
+.add-column-btn {
+  position: absolute;
+  display: none;
+  cursor: pointer;
+  top: 0;
+  right: 0;
+}
+
+th:hover .add-column-btn {
+  display: inline;
 }
 
 th, td {
