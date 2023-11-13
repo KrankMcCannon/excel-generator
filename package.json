@@ -6,7 +6,6 @@
   "repository": "https://github.com/KrankMcCannon/excel-generator.git",
   "author": "Edoardo Valentini",
   "license": "MIT",
-  "private": true,
   "scripts": {
     "start": "electron-forge start",
     "start:dev": "npx electronmon .",

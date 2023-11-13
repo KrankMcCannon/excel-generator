@@ -20,6 +20,17 @@ header {
   margin: 40px 0px;
 }
 
+.title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title h1 {
+  font-size: 2.5em;
+  margin: 0;
+}
+
 .title-clock {
   display: flex;
   flex-direction: column;
