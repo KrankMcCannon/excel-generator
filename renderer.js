@@ -1,8 +1,8 @@
 // Event listeners
 
-const openFileButton = document.getElementById('open-file');
+const openFileButton = document.getElementById("open-file");
 if (openFileButton) {
-  openFileButton.addEventListener('click', () => {
+  openFileButton.addEventListener("click", () => {
     window.electron.openFile();
   });
 }
@@ -35,7 +35,16 @@ const addColumnButton = document.getElementById('excel-data');
 if (addColumnButton) {
   addColumnButton.addEventListener('click', (event) => {
     if (event.target && event.target.classList.contains('add-column-btn')) {
-      addColumn(event);
+      addColumn(event.target);
+    }
+  });
+}
+
+const removeColumnButton = document.getElementById('excel-data');
+if (removeColumnButton) {
+  removeColumnButton.addEventListener('click', (event) => {
+    if (event.target && event.target.classList.contains('remove-column-btn')) {
+      removeColumn(event);
     }
   });
 }
@@ -48,8 +57,8 @@ if (prepareTableButton) {
       "proprietario",
       "telefono",
       "razza",
-      "data_ultimo_taglio",
-      "data_prossimo_taglio",
+      "data_ultimo_appuntamento",
+      "data_prossimo_appuntamento",
       "servizio",
       "prezzo",
       "note",
@@ -60,7 +69,8 @@ if (prepareTableButton) {
         .join(" ")
     );
 
-    document.getElementById("excel-data").innerHTML = generateTableHTML(headers);
+    document.getElementById("excel-data").innerHTML =
+      generateTableHTML(headers);
     ["add-row", "create-table", "return-home"].forEach((id) => {
       document.getElementById(id).style.display = "block";
     });
@@ -106,17 +116,19 @@ if (createTableButton) {
 const returnHomeButton = document.getElementById("return-home");
 if (returnHomeButton) {
   returnHomeButton.addEventListener("click", () => {
-    document.getElementById("excel-data").innerHTML = '';
-    ["prepare-table", "return-home", "create-table", "update-table", "add-row"].forEach((id) => {
-      document.getElementById(id).style.display = id === "prepare-table" ? "block" : "none";
+    document.getElementById("excel-data").innerHTML = "";
+    [
+      "prepare-table",
+      "return-home",
+      "create-table",
+      "update-table",
+      "add-row",
+    ].forEach((id) => {
+      document.getElementById(id).style.display =
+        id === "prepare-table" ? "block" : "none";
     });
   });
 }
-
-// After the table is generated and added to the DOM:
-document.querySelectorAll('.add-column-btn').forEach(btn => {
-  btn.addEventListener('click', addColumn);
-});
 
 window.electron.onExcelData((data) => {
   const table = processTableData(data);
@@ -150,9 +162,9 @@ function generateTableHTML(headers, data = []) {
   let tableHTML = "<thead><tr>";
 
   headers.forEach((header) => {
-    tableHTML += `<th>${header} <button class="add-column-btn">+</button></th>`;
+    tableHTML += `<th contenteditable='true'>${header} <button class="add-column-btn">+</button><button class="remove-column-btn">-</button></th>`;
   });
-  tableHTML += '<th>Azioni</th>';
+  tableHTML += "<th>Azioni</th>";
   tableHTML += "</tr></thead><tbody>";
 
   if (data.length > 0) {
@@ -179,18 +191,13 @@ function generateTableHTML(headers, data = []) {
 
 function processTableData(table) {
   if (table instanceof HTMLElement && table.innerHTML) {
-    const headers = Array
-    .from(table.querySelectorAll("thead th"))
-    .slice(0, -1) // Exclude the 'Actions' column
-    .map(th => th.childNodes[0].nodeValue.trim()); // Get only the text, excluding the button
+    const headers = Array.from(table.querySelectorAll("thead th"))
+      .slice(0, -1) // Exclude the 'Actions' column
+      .map((th) => th.childNodes[0].nodeValue.trim()); // Get only the text, excluding the button
 
-  return Array
-    .from(table.querySelectorAll("tbody tr"))
-    .map(row => {
+    return Array.from(table.querySelectorAll("tbody tr")).map((row) => {
       const rowData = {};
-      const cells = Array
-        .from(row.cells)
-        .slice(0, -1); // Exclude the 'Actions' column
+      const cells = Array.from(row.cells).slice(0, -1); // Exclude the 'Actions' column
 
       cells.forEach((cell, index) => {
         rowData[headers[index]] = cell.textContent.trim(); // Get text content of each cell
@@ -215,25 +222,53 @@ function showMessage(message) {
   }, 5000);
 }
 
-function addColumn(event) {
-  const clickedButton = event.target;
+function addColumn(clickedButton) {
   const clickedHeader = clickedButton.closest('th');
   const headersRow = clickedHeader.parentNode;
-  const table = headersRow.closest('table');
-  const bodyRows = table.querySelectorAll("tbody tr");
   const columnIndex = Array.from(headersRow.children).indexOf(clickedHeader);
 
-  // Insert new header cell
+  // Create new header cell
   const newHeaderCell = document.createElement("th");
-  newHeaderCell.contentEditable = "true"; // Make it editable for naming
-  newHeaderCell.innerText = "Nuova Colonna"; // Placeholder text, user can change it
-  headersRow.insertBefore(newHeaderCell, clickedHeader.nextSibling);
+  newHeaderCell.contentEditable = "true";
+  newHeaderCell.innerText = "Nuova Colonna";
 
-  // Insert new cells in body rows
-  bodyRows.forEach(row => {
+  // Create and append add and remove column buttons to the new header
+  newHeaderCell.appendChild(createAddColumnButton());
+  newHeaderCell.appendChild(createRemoveColumnButton());
+
+  // Insert the new header cell after the clicked header
+  if (clickedHeader.nextSibling) {
+    headersRow.insertBefore(newHeaderCell, clickedHeader.nextSibling);
+  } else {
+    headersRow.appendChild(newHeaderCell);
+  }
+
+  // Insert new cells in body rows at the corresponding index
+  const table = headersRow.closest('table');
+  Array.from(table.querySelectorAll("tbody tr")).forEach(row => {
     const newCell = document.createElement("td");
     newCell.contentEditable = "true";
-    row.insertBefore(newCell, row.children[columnIndex + 1]);
+    if (row.children[columnIndex + 1]) {
+      row.insertBefore(newCell, row.children[columnIndex + 1]);
+    } else {
+      row.appendChild(newCell);
+    }
+  });
+}
+
+function removeColumn(event) {
+  const clickedButton = event.target;
+  const clickedHeader = clickedButton.closest("th");
+  const headersRow = clickedHeader.parentNode;
+  const table = headersRow.closest("table");
+  const columnIndex = Array.from(headersRow.children).indexOf(clickedHeader);
+
+  // Remove the header cell
+  headersRow.removeChild(clickedHeader);
+
+  // Remove the corresponding cells in body rows
+  Array.from(table.querySelectorAll("tbody tr")).forEach((row) => {
+    row.removeChild(row.children[columnIndex]);
   });
 }
 
@@ -241,7 +276,21 @@ function createAddColumnButton() {
   const button = document.createElement("button");
   button.className = "add-column-btn";
   button.textContent = "+";
-  button.addEventListener("click", addColumn);
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    addColumn(button);
+  });
+  return button;
+}
+
+function createRemoveColumnButton() {
+  const button = document.createElement("button");
+  button.className = "remove-column-btn";
+  button.textContent = "-";
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    removeColumn(event);
+  });
   return button;
 }
 
@@ -249,12 +298,20 @@ function updateDateAndTime() {
   const now = new Date();
 
   // Update Date
-  const dateString = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  document.getElementById('date-display').textContent = dateString;
+  const dateString = now.toLocaleDateString(undefined, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  document.getElementById("date-display").textContent = dateString;
 
   // Update Time
-  const timeString = now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  document.getElementById('clock-display').textContent = timeString;
+  const timeString = now.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  document.getElementById("clock-display").textContent = timeString;
 }
 
 // Initialize and set the interval to update every second

@@ -91,6 +91,19 @@ th:hover .add-column-btn {
   display: inline;
 }
 
+.remove-column-btn {
+  display: none;
+  background-color: #f0f0f0;
+  color: #333;
+  padding: 0px 6px;
+  margin: 0px 0px 0px 5px;
+  font-size: 0.8em;
+}
+
+th:hover .remove-column-btn {
+  display: inline-block;
+}
+
 /* Drag and Drop Area Styles */
 #drag {
   border: 2px dashed #28a745;
