@@ -19,6 +19,23 @@ if (dropZone) {
   });
 }
 
+const addRowButton = document.getElementById("add-row");
+if (addRowButton) {
+  addRowButton.addEventListener("click", () => {
+    const table = document.getElementById("excel-data").querySelector("tbody");
+    const newRow = table.insertRow();
+
+    for (let i = 0; i < table.parentElement.rows[0].cells.length; i++) {
+      const cell = newRow.insertCell(i);
+      if (i !== table.parentElement.rows[0].cells.length - 1) {
+        cell.contentEditable = "true";
+      } else {
+        cell.innerHTML = `<button class="remove-row">Rimuovi</button>`;
+      }
+    }
+  });
+}
+
 const removeRowButton = document.getElementById('excel-data');
 if (removeRowButton) {
   removeRowButton.addEventListener('click', (event) => {
@@ -78,20 +95,12 @@ if (prepareTableButton) {
   });
 }
 
-const addRowButton = document.getElementById("add-row");
-if (addRowButton) {
-  addRowButton.addEventListener("click", () => {
-    const table = document.getElementById("excel-data").querySelector("tbody");
-    const newRow = table.insertRow();
-
-    for (let i = 0; i < table.parentElement.rows[0].cells.length; i++) {
-      const cell = newRow.insertCell(i);
-      if (i !== table.parentElement.rows[0].cells.length - 1) {
-        cell.contentEditable = "true";
-      } else {
-        cell.innerHTML = `<button class="remove-row">Rimuovi</button>`;
-      }
-    }
+const createTableButton = document.getElementById("create-table");
+if (createTableButton) {
+  createTableButton.addEventListener("click", () => {
+    const table = document.getElementById("excel-data");
+    const data = processTableData(table);
+    window.electron.createExcelFile(data);
   });
 }
 
@@ -101,15 +110,6 @@ if (updateTableButton) {
     const table = document.getElementById("excel-data");
     const data = processTableData(table);
     window.electron.updateExcelFile(data);
-  });
-}
-
-const createTableButton = document.getElementById("create-table");
-if (createTableButton) {
-  createTableButton.addEventListener("click", () => {
-    const table = document.getElementById("excel-data");
-    const data = processTableData(table);
-    window.electron.createExcelFile(data);
   });
 }
 
@@ -143,6 +143,7 @@ window.electron.onExcelData((data) => {
   });
   document.getElementById("add-row").style.display = "block";
   document.getElementById("return-home").style.display = "block";
+  attachSortButtonListeners();
 });
 
 ["onUpdateResponse", "onCreateResponse"].forEach((eventType) => {
@@ -161,8 +162,8 @@ function preventDefaultActions(e) {
 function generateTableHTML(headers, data = []) {
   let tableHTML = "<thead><tr>";
 
-  headers.forEach((header) => {
-    tableHTML += `<th contenteditable='true'>${header} <button class="add-column-btn">+</button><button class="remove-column-btn">-</button></th>`;
+  headers.forEach((header, index) => {
+    tableHTML += `<th contenteditable='true'>${header} <button class="sort-btn" data-column-index="${index}">↕</button><button class="add-column-btn">+</button><button class="remove-column-btn">-</button></th>`;
   });
   tableHTML += "<th>Azioni</th>";
   tableHTML += "</tr></thead><tbody>";
@@ -312,6 +313,92 @@ function updateDateAndTime() {
     minute: "2-digit",
   });
   document.getElementById("clock-display").textContent = timeString;
+}
+
+function attachSortButtonListeners() {
+  const sortButtons = document.querySelectorAll(".sort-btn");
+  sortButtons.forEach(button => {
+      button.addEventListener("click", () => {
+          const columnIndex = button.getAttribute("data-column-index");
+          sortColumn(columnIndex);
+      });
+  });
+}
+
+let sortState = {};
+
+function sortColumn(columnIndex) {
+  // Get the current sort order or set default to 'none'
+  let sortOrder = sortState[columnIndex] || 'none';
+
+  // Toggle sort order
+  sortOrder = sortOrder === 'asc' ? 'desc' : sortOrder === 'desc' ? 'none' : 'asc';
+  sortState = { [columnIndex]: sortOrder };
+
+  // Get table data
+  const table = document.getElementById("excel-data");
+  let rows = Array.from(table.querySelectorAll("tbody tr"));
+
+  if (sortOrder !== 'none') {
+    rows.sort((rowA, rowB) => {
+      let valA = rowA.cells[columnIndex].textContent.trim();
+      let valB = rowB.cells[columnIndex].textContent.trim();
+
+      // Check if the values are dates or prices, and parse them
+      if (isDate(valA) && isDate(valB)) {
+        valA = new Date(valA);
+        valB = new Date(valB);
+      } else if (isPrice(valA) && isPrice(valB)) {
+        valA = parseFloat(valA);
+        valB = parseFloat(valB);
+      }
+
+      // Sorting logic
+      if (valA < valB) {
+        return sortOrder === 'asc' ? -1 : 1;
+      }
+      if (valA > valB) {
+        return sortOrder === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    // Append sorted rows back to the table
+    rows.forEach(row => table.querySelector("tbody").appendChild(row));
+  }
+
+  // Update UI arrows to reflect the new sort order
+  updateSortArrows();
+}
+
+function updateSortArrows() {
+  document.querySelectorAll('.sort-btn').forEach(button => {
+    const columnIndex = button.getAttribute('data-column-index');
+    const sortOrder = sortState[columnIndex] || 'none';
+    switch (sortOrder) {
+      case 'none':
+        button.textContent = '↕'; // or any neutral symbol
+        break;
+      case 'asc':
+        button.textContent = '↑';
+        break;
+      case 'desc':
+        button.textContent = '↓';
+        break;
+    }
+  });
+}
+
+function isDate(value) {
+  // Regular expression for date in YYYY-MM-DD or DD/MM/YYYY format
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$/;
+  return dateRegex.test(value);
+}
+
+function isPrice(value) {
+  // Removing common currency symbols and commas
+  const cleanedValue = value.replace(/[,$€£]/g, '').replace(/,/g, '.');
+  return !isNaN(cleanedValue) && cleanedValue.trim() !== '';
 }
 
 // Initialize and set the interval to update every second
