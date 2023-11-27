@@ -27,12 +27,16 @@ if (addRowButton) {
 
     for (let i = 0; i < table.parentElement.rows[0].cells.length; i++) {
       const cell = newRow.insertCell(i);
-      if (i !== table.parentElement.rows[0].cells.length - 1) {
+      if (i === 0) {
+        cell.innerHTML = `<button type="checkbox" class="pin-row-btn" />`;
+      } else if (i !== table.parentElement.rows[0].cells.length - 1) {
         cell.contentEditable = "true";
       } else {
         cell.innerHTML = `<button class="remove-row">Rimuovi</button>`;
       }
     }
+
+    attachPinButtonListeners();
   });
 }
 
@@ -144,6 +148,7 @@ window.electron.onExcelData((data) => {
   document.getElementById("add-row").style.display = "block";
   document.getElementById("return-home").style.display = "block";
   attachSortButtonListeners();
+  attachPinButtonListeners();
 });
 
 ["onUpdateResponse", "onCreateResponse"].forEach((eventType) => {
@@ -161,9 +166,10 @@ function preventDefaultActions(e) {
 
 function generateTableHTML(headers, data = []) {
   let tableHTML = "<thead><tr>";
+  tableHTML += '<th>Preferito</th>';
 
   headers.forEach((header, index) => {
-    tableHTML += `<th contenteditable='true'>${header} <button class="sort-btn" data-column-index="${index}">↕</button><button class="add-column-btn">+</button><button class="remove-column-btn">-</button></th>`;
+    tableHTML += `<th><div contenteditable='true'>${header}</div><button class="sort-btn" data-column-index="${index}">↕</button><div><button class="add-column-btn">+</button><button class="remove-column-btn">-</button></div></th>`;
   });
   tableHTML += "<th>Azioni</th>";
   tableHTML += "</tr></thead><tbody>";
@@ -171,6 +177,7 @@ function generateTableHTML(headers, data = []) {
   if (data.length > 0) {
     data.forEach((row) => {
       tableHTML += "<tr>";
+      tableHTML += `<td><button type="checkbox" class="pin-row-btn" /></td>`;
       headers.forEach((header) => {
         tableHTML += `<td contenteditable='true'>${row[header] || ""}</td>`;
       });
@@ -179,6 +186,7 @@ function generateTableHTML(headers, data = []) {
     });
   } else {
     tableHTML += "<tr>";
+    tableHTML += `<td><button type="checkbox" class="pin-row-btn" /></td>`;
     headers.forEach(() => {
       tableHTML += `<td contenteditable='true'></td>`;
     });
@@ -337,12 +345,16 @@ function sortColumn(columnIndex) {
 
   // Get table data
   const table = document.getElementById("excel-data");
-  let rows = Array.from(table.querySelectorAll("tbody tr"));
+  const rows = Array.from(table.querySelectorAll("tbody tr"));
+
+  // Separate pinned rows
+  const pinnedRows = rows.filter(row => row.classList.contains('pinned-row'));
+  const regularRows = rows.filter(row => !row.classList.contains('pinned-row'));
 
   if (sortOrder !== 'none') {
-    rows.sort((rowA, rowB) => {
-      let valA = rowA.cells[columnIndex].textContent.trim();
-      let valB = rowB.cells[columnIndex].textContent.trim();
+    regularRows.sort((rowA, rowB) => {
+      let valA = rowA.cells[parseInt(columnIndex) + 1].textContent.trim();
+      let valB = rowB.cells[parseInt(columnIndex) + 1].textContent.trim();
 
       // Check if the values are dates or prices, and parse them
       if (isDate(valA) && isDate(valB)) {
@@ -351,6 +363,10 @@ function sortColumn(columnIndex) {
       } else if (isPrice(valA) && isPrice(valB)) {
         valA = parseFloat(valA);
         valB = parseFloat(valB);
+      } else {
+        // If not, compare them as strings
+        valA = valA.toLowerCase();
+        valB = valB.toLowerCase();
       }
 
       // Sorting logic
@@ -364,7 +380,8 @@ function sortColumn(columnIndex) {
     });
 
     // Append sorted rows back to the table
-    rows.forEach(row => table.querySelector("tbody").appendChild(row));
+    pinnedRows.forEach(row => table.querySelector("tbody").prepend(row)); // Keep pinned rows at the top
+    regularRows.forEach(row => table.querySelector("tbody").appendChild(row)); // Append sorted regular rows
   }
 
   // Update UI arrows to reflect the new sort order
@@ -390,15 +407,34 @@ function updateSortArrows() {
 }
 
 function isDate(value) {
-  // Regular expression for date in YYYY-MM-DD or DD/MM/YYYY format
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$/;
-  return dateRegex.test(value);
+  return !isNaN(new Date(value).getDate());
 }
 
 function isPrice(value) {
   // Removing common currency symbols and commas
   const cleanedValue = value.replace(/[,$€£]/g, '').replace(/,/g, '.');
   return !isNaN(cleanedValue) && cleanedValue.trim() !== '';
+}
+
+function attachPinButtonListeners() {
+  const pinButtons = document.querySelectorAll(".pin-row-btn");
+  pinButtons.forEach(button => {
+      button.addEventListener("click", () => {
+          pinRow(button);
+      });
+  });
+}
+
+function pinRow(clickedButton) {
+  const row = clickedButton.closest('tr');
+  const tableBody = row.closest('tbody');
+  tableBody.prepend(row); // Move the row to the top
+  if (row.classList.contains('pinned-row')) {
+    row.classList.toggle('pinned-row', false);
+    return;
+  }
+
+  row.classList.toggle('pinned-row', true);
 }
 
 // Initialize and set the interval to update every second

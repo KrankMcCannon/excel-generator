@@ -78,11 +78,11 @@ button:hover {
   background-color: #f0f0f0;
   color: #333;
   padding: 0px 6px;
-  margin: 0px 0px 0px 5px;
   font-size: 0.8em;
+  margin: 0px 5px;
 }
 
-.add-column-btn:hover {
+.add-column-btn:hover, .remove-column-btn:hover, .sort-btn:hover {
   background-color: #f0f0f0; /* A darker green for hover state */
   transform: translateY(-2px); /* Slight raise effect on hover */
 }
@@ -91,13 +91,16 @@ th:hover .add-column-btn {
   display: inline;
 }
 
-.remove-column-btn {
-  display: none;
+.remove-column-btn, .sort-btn {
   background-color: #f0f0f0;
   color: #333;
   padding: 0px 6px;
-  margin: 0px 0px 0px 5px;
   font-size: 0.8em;
+  margin: 0;
+}
+
+.remove-column-btn {
+  display: none;
 }
 
 th:hover .remove-column-btn {
@@ -129,15 +132,39 @@ table {
 }
 
 th, td {
-  padding: 10px 15px;
   border: 1px solid #404040; /* Darker border color for better contrast */
   border-bottom: 1px solid #606060; /* Slightly lighter border for the bottom to distinguish between rows */
+  text-align: center; /* Centers text horizontally */
+  vertical-align: middle; /* Centers content vertically */
 }
 
 /* Additional styling for header cells if needed */
 th {
   background-color: #f2f2f2;
   color: black;
+  padding: 10px 5px;
+}
+
+td {
+  padding: 0 10px;
+}
+
+/* Styles for each part inside the header cell */
+th > div, th > .sort-btn {
+  font-size: 0.8em; /* Smaller font size for the text */
+  margin: 0; /* Remove margin to ensure the elements are flush against each other */
+  flex: 1; /* Each child takes equal space */
+  text-align: center; /* Center the text */
+  display: inline;
+}
+
+/* Ensure that the editable div doesn't overflow */
+th > div[contenteditable="true"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1em; /* Smaller font size for the text */
+  margin: 0 5px; /* Add space between the elements */
 }
 
 /* Zebra Striping for table rows */
@@ -159,7 +186,6 @@ tr:nth-child(even) { /* targeting even rows for another color */
   color: white;
   background: #dc3545; /* Bootstrap's btn-danger color */
   cursor: pointer;
-  margin: 0px 10%;
 }
 
 .remove-row:hover {
@@ -168,6 +194,24 @@ tr:nth-child(even) { /* targeting even rows for another color */
 
 .remove-row:hover {
   text-decoration: underline;
+}
+
+.pin-row-btn {
+  margin: auto; /* Centers the checkbox horizontally */
+  display: block; /* Makes the checkbox a block element to allow margin auto to work */
+  appearance: none; /* Removes default checkbox styling */
+  cursor: pointer; /* Changes cursor to pointer to indicate clickable item */
+  width: 24px; /* Width of the button */
+  height: 24px; /* Height of the button */
+  padding: 0; /* Removes padding to ensure the icon covers the button area */
+  background-color: transparent; /* Transparent background */
+  border: none; /* Removes border */
+  background-size: cover; /* Ensure the icon covers the button area */
+  outline: none; /* Removes the outline to avoid default focus styles */
+}
+
+table tbody tr.pinned-row {
+  background-color: #ffd700; /* Gold color for favorite rows */
 }
 
 /* Message Box Styles */
