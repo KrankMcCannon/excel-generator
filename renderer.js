@@ -29,14 +29,17 @@ if (addRowButton) {
       const cell = newRow.insertCell(i);
       if (i === 0) {
         cell.innerHTML = `<button type="checkbox" class="pin-row-btn" />`;
-      } else if (i !== table.parentElement.rows[0].cells.length - 1) {
+      } else if (i !== table.parentElement.rows[0].cells.length - 2 && i !== table.parentElement.rows[0].cells.length - 1) {
         cell.contentEditable = "true";
+      } else if (i !== table.parentElement.rows[0].cells.length - 1) {
+        cell.innerHTML = `<td><button class="three-dot-btn">...</button></td>`;
       } else {
-        cell.innerHTML = `<button class="remove-row">Rimuovi</button>`;
+        cell.innerHTML = `<td><button class="remove-row hidden">Remove</button></td>`;
       }
     }
 
     attachPinButtonListeners();
+    attachThreeDotButtonListeners();
   });
 }
 
@@ -96,6 +99,8 @@ if (prepareTableButton) {
       document.getElementById(id).style.display = "block";
     });
     document.getElementById("prepare-table").style.display = "none";
+    attachPinButtonListeners();
+    attachThreeDotButtonListeners();
   });
 }
 
@@ -149,6 +154,7 @@ window.electron.onExcelData((data) => {
   document.getElementById("return-home").style.display = "block";
   attachSortButtonListeners();
   attachPinButtonListeners();
+  attachThreeDotButtonListeners();
 });
 
 ["onUpdateResponse", "onCreateResponse"].forEach((eventType) => {
@@ -165,14 +171,18 @@ function preventDefaultActions(e) {
 }
 
 function generateTableHTML(headers, data = []) {
-  let tableHTML = "<thead><tr>";
+  let tableHTML = "<thead>";
+  tableHTML += "<tr>";
   tableHTML += '<th>Preferito</th>';
 
   headers.forEach((header, index) => {
     tableHTML += `<th><div contenteditable='true'>${header}</div><button class="sort-btn" data-column-index="${index}">↕</button><div><button class="add-column-btn">+</button><button class="remove-column-btn">-</button></div></th>`;
   });
   tableHTML += "<th>Azioni</th>";
-  tableHTML += "</tr></thead><tbody>";
+  tableHTML += "<th></th>";
+  tableHTML += "</tr>";
+  tableHTML += "</thead>";
+  tableHTML += "<tbody>";
 
   if (data.length > 0) {
     data.forEach((row) => {
@@ -181,7 +191,8 @@ function generateTableHTML(headers, data = []) {
       headers.forEach((header) => {
         tableHTML += `<td contenteditable='true'>${row[header] || ""}</td>`;
       });
-      tableHTML += `<td><button class="remove-row">Rimuovi</button></td>`;
+      tableHTML += `<td><button class="three-dot-btn">...</button></td>`;
+      tableHTML += `<td><button class="remove-row hidden">Rimuovi</button></td>`;
       tableHTML += "</tr>";
     });
   } else {
@@ -190,7 +201,8 @@ function generateTableHTML(headers, data = []) {
     headers.forEach(() => {
       tableHTML += `<td contenteditable='true'></td>`;
     });
-    tableHTML += `<td><button class="remove-row">Rimuovi</button></td>`;
+    tableHTML += `<td><button class="three-dot-btn">...</button></td>`;
+    tableHTML += `<td><button class="remove-row hidden">Rimuovi</button></td>`;
     tableHTML += "</tr>";
   }
 
@@ -435,6 +447,22 @@ function pinRow(clickedButton) {
   }
 
   row.classList.toggle('pinned-row', true);
+}
+
+function attachThreeDotButtonListeners() {
+  const threeDotButtons = document.querySelectorAll(".three-dot-btn");
+  threeDotButtons.forEach(button => {
+    button.addEventListener("click", (event) => {
+      const removeButtonTD = event.target.closest("tr").lastElementChild;
+      const removeButton = removeButtonTD.firstElementChild;
+      if (removeButton.classList.contains("hidden")) {
+        removeButton.classList.toggle("hidden", false);
+        return;
+      }
+
+      removeButton.classList.toggle("hidden", true);
+    });
+  });
 }
 
 // Initialize and set the interval to update every second

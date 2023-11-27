@@ -186,14 +186,25 @@ tr:nth-child(even) { /* targeting even rows for another color */
   color: white;
   background: #dc3545; /* Bootstrap's btn-danger color */
   cursor: pointer;
+  padding: 5px;
+}
+
+.hidden {
+  display: none;
 }
 
 .remove-row:hover {
   background: #c82333; /* A darker red for hover state */
 }
 
-.remove-row:hover {
-  text-decoration: underline;
+/* Style for 3-dot button */
+.three-dot-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 24px; /* Width of the button */
+  height: 24px; /* Height of the button */
+  padding: 5px 0;
 }
 
 .pin-row-btn {
