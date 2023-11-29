@@ -158,7 +158,12 @@ const readFileContent = async (filePath) => {
         } else {
           const rowObject = {};
           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            rowObject[headers[colNumber - 1]] = cell.value;
+            const key = headers[colNumber - 1];
+            if (key === 'Pinned') {
+              rowObject['isPinned'] = cell.value === 'Yes'; // Assuming you saved "Yes" for true
+            } else {
+              rowObject[key] = cell.value;
+            }
           });
           jsonData.push(rowObject);
         }
@@ -168,6 +173,8 @@ const readFileContent = async (filePath) => {
         fs.createReadStream(filePath)
           .pipe(csvParser({ separator: ";" }))
           .on("data", (row) => {
+            // Convert 'isPinned' from string to boolean
+            row.isPinned = row.isPinned === 'Yes'; // Assuming you saved "Yes" for true
             jsonData.push(row);
           })
           .on("end", resolve)
@@ -190,15 +197,18 @@ const updateExcelFile = async (filePath, tableData) => {
 
     const worksheet = workbook.addWorksheet("Dogs");
 
-    const headers = Object.keys(tableData[0]);
-    worksheet.columns = headers.map((header) => ({
-      header: header,
-      key: header,
-    }));
+    // Define columns including the 'isPinned' column
+    worksheet.columns = [
+      { header: 'Pinned', key: 'isPinned' },
+      ...Object.keys(tableData[0]).filter(key => key !== 'isPinned').map(key => ({ header: key, key }))
+    ];
 
     // Write new rows with updated data
     tableData.forEach((rowData) => {
-      worksheet.addRow(rowData).commit(); // rowData is an object where key is column header
+      // Transform 'isPinned' to a more Excel-friendly format, like "Yes" or "No"
+      rowData.isPinned = rowData.isPinned ? "Yes" : "No";
+      // rowData is an object where key is column header and value is cell value
+      worksheet.addRow(rowData).commit();
     });
 
     // Save the workbook to the file
