@@ -212,13 +212,18 @@ function generateTableHTML(headers, data = []) {
 
 function processTableData(table) {
   if (table instanceof HTMLElement && table.innerHTML) {
+    // Get headers excluding the 'Preferito' and 'Azioni' columns
     const headers = Array.from(table.querySelectorAll("thead th"))
-      .slice(0, -1) // Exclude the 'Actions' column
-      .map((th) => th.childNodes[0].nodeValue.trim()); // Get only the text, excluding the button
+      .slice(1, -2) // Slice to exclude 'Preferito' and 'Azioni' columns
+      .map((th) => {
+        // Assuming your header text is in the first <div> directly under <th>
+        const headerTextElement = th.querySelector('div:first-child');
+        return headerTextElement ? headerTextElement.textContent.trim() : th.textContent.trim();
+      });
 
     return Array.from(table.querySelectorAll("tbody tr")).map((row) => {
       const rowData = {};
-      const cells = Array.from(row.cells).slice(0, -1); // Exclude the 'Actions' column
+      const cells = Array.from(row.cells).slice(1, -2); // Slice to exclude 'Preferito' and 'Azioni' cells
 
       cells.forEach((cell, index) => {
         rowData[headers[index]] = cell.textContent.trim(); // Get text content of each cell
