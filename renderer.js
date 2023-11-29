@@ -103,6 +103,7 @@ if (prepareTableButton) {
       document.getElementById(id).style.display = "block";
     });
     document.getElementById("prepare-table").style.display = "none";
+    attachSortButtonListeners();
     attachPinButtonListeners();
     attachThreeDotButtonListeners();
   });
@@ -193,7 +194,7 @@ function generateTableHTML(headers, data = []) {
       return;
     }
 
-    tableHTML += `<th><div contenteditable='true'>${header}</div><button class="sort-btn" data-column-index="${index}">↕</button><div><button class="add-column-btn">+</button><button class="remove-column-btn">-</button></div></th>`;
+    tableHTML += `<th><div contenteditable='true'>${header}</div><button class="sort-btn" data-column-index="${index}">Casual</button><div><button class="add-column-btn">+</button><button class="remove-column-btn">-</button></div></th>`;
   });
 
   tableHTML += "<th>Azioni</th>";
@@ -440,13 +441,13 @@ function updateSortArrows() {
     const sortOrder = sortState[columnIndex] || "none";
     switch (sortOrder) {
       case "none":
-        button.textContent = "↕"; // or any neutral symbol
+        button.textContent = "Casual";
         break;
       case "asc":
-        button.textContent = "↑";
+        button.textContent = "A → Z";
         break;
       case "desc":
-        button.textContent = "↓";
+        button.textContent = "Z ← A";
         break;
     }
   });

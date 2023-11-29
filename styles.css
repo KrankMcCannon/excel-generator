@@ -69,7 +69,6 @@ button {
 
 button:hover {
   background-color: #218838; /* A darker green for hover state */
-  transform: translateY(-2px); /* Slight raise effect on hover */
 }
 
 /* Special button styles for add-column-btn */
@@ -199,7 +198,8 @@ tr:nth-child(even) { /* targeting even rows for another color */
 
 /* Style for 3-dot button */
 .three-dot-btn {
-  background: none;
+  background: white;
+  color: black;
   border: none;
   cursor: pointer;
   width: 24px; /* Width of the button */
@@ -215,7 +215,7 @@ tr:nth-child(even) { /* targeting even rows for another color */
   width: 24px; /* Width of the button */
   height: 24px; /* Height of the button */
   padding: 0; /* Removes padding to ensure the icon covers the button area */
-  background-color: transparent; /* Transparent background */
+  background-color: white; /* White background */
   border: none; /* Removes border */
   background-size: cover; /* Ensure the icon covers the button area */
   outline: none; /* Removes the outline to avoid default focus styles */
