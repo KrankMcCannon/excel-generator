@@ -29,7 +29,10 @@ if (addRowButton) {
       const cell = newRow.insertCell(i);
       if (i === 0) {
         cell.innerHTML = `<button type="checkbox" class="pin-row-btn" />`;
-      } else if (i !== table.parentElement.rows[0].cells.length - 2 && i !== table.parentElement.rows[0].cells.length - 1) {
+      } else if (
+        i !== table.parentElement.rows[0].cells.length - 2 &&
+        i !== table.parentElement.rows[0].cells.length - 1
+      ) {
         cell.contentEditable = "true";
       } else if (i !== table.parentElement.rows[0].cells.length - 1) {
         cell.innerHTML = `<td><button class="three-dot-btn">...</button></td>`;
@@ -43,11 +46,11 @@ if (addRowButton) {
   });
 }
 
-const removeRowButton = document.getElementById('excel-data');
+const removeRowButton = document.getElementById("excel-data");
 if (removeRowButton) {
-  removeRowButton.addEventListener('click', (event) => {
-    if (event.target && event.target.classList.contains('remove-row')) {
-      const rowElement = event.target.closest('tr');
+  removeRowButton.addEventListener("click", (event) => {
+    if (event.target && event.target.classList.contains("remove-row")) {
+      const rowElement = event.target.closest("tr");
       if (rowElement) {
         rowElement.remove();
       }
@@ -55,19 +58,19 @@ if (removeRowButton) {
   });
 }
 
-const addColumnButton = document.getElementById('excel-data');
+const addColumnButton = document.getElementById("excel-data");
 if (addColumnButton) {
-  addColumnButton.addEventListener('click', (event) => {
-    if (event.target && event.target.classList.contains('add-column-btn')) {
+  addColumnButton.addEventListener("click", (event) => {
+    if (event.target && event.target.classList.contains("add-column-btn")) {
       addColumn(event.target);
     }
   });
 }
 
-const removeColumnButton = document.getElementById('excel-data');
+const removeColumnButton = document.getElementById("excel-data");
 if (removeColumnButton) {
-  removeColumnButton.addEventListener('click', (event) => {
-    if (event.target && event.target.classList.contains('remove-column-btn')) {
+  removeColumnButton.addEventListener("click", (event) => {
+    if (event.target && event.target.classList.contains("remove-column-btn")) {
       removeColumn(event);
     }
   });
@@ -77,6 +80,7 @@ const prepareTableButton = document.getElementById("prepare-table");
 if (prepareTableButton) {
   prepareTableButton.addEventListener("click", () => {
     const headers = [
+      "preferito",
       "cane",
       "proprietario",
       "telefono",
@@ -173,23 +177,37 @@ function preventDefaultActions(e) {
 function generateTableHTML(headers, data = []) {
   let tableHTML = "<thead>";
   tableHTML += "<tr>";
-  tableHTML += '<th>Preferito</th>';
+
+  if (!headers.find((header) => header === "Preferito")) {
+    headers.unshift("Preferito");
+  }
 
   headers.forEach((header, index) => {
-    if (index === 0) return;
+    if (header === "Preferito" || header === "Azioni") {
+      tableHTML += `<th>${header}</th>`;
+      return;
+    }
+
+    if (header === "") {
+      tableHTML += "<th></th>";
+      return;
+    }
+
     tableHTML += `<th><div contenteditable='true'>${header}</div><button class="sort-btn" data-column-index="${index}">↕</button><div><button class="add-column-btn">+</button><button class="remove-column-btn">-</button></div></th>`;
   });
+
   tableHTML += "<th>Azioni</th>";
   tableHTML += "<th></th>";
   tableHTML += "</tr>";
   tableHTML += "</thead>";
-  tableHTML += "<tbody>";
 
+  tableHTML += "<tbody>";
   if (data.length > 0) {
     data.forEach((row) => {
-      tableHTML += `<tr ${row.Preferito ? "class='pinned-row'" : ''} >`;
-      tableHTML += `<td><button type='checkbox' class='pin-row-btn' ${row.Preferito ? 'checked' : ''} /></td>`;
-      headers.slice(1).forEach((header) => {
+      tableHTML += `<tr ${row.Preferito ? "class='pinned-row'" : ""} >`;
+      tableHTML += `<td><button type='checkbox' class='pin-row-btn' /></td>`;
+      headers.forEach((header) => {
+        if (header === "Preferito") return;
         tableHTML += `<td contenteditable='true'>${row[header] || ""}</td>`;
       });
       tableHTML += `<td><button class="three-dot-btn">...</button></td>`;
@@ -218,12 +236,14 @@ function processTableData(table) {
       .slice(1, -2) // Slice to exclude 'Preferito' and 'Azioni' columns
       .map((th) => {
         // Assuming your header text is in the first <div> directly under <th>
-        const headerTextElement = th.querySelector('div:first-child');
-        return headerTextElement ? headerTextElement.textContent.trim() : th.textContent.trim();
+        const headerTextElement = th.querySelector("div:first-child");
+        return headerTextElement
+          ? headerTextElement.textContent.trim()
+          : th.textContent.trim();
       });
 
     return Array.from(table.querySelectorAll("tbody tr")).map((row) => {
-      const rowData = { Preferito: row.classList.contains('pinned-row') };
+      const rowData = { Preferito: row.classList.contains("pinned-row") };
       const cells = Array.from(row.cells).slice(1, -2); // Slice to exclude 'Preferito' and 'Azioni' cells
 
       cells.forEach((cell, index) => {
@@ -249,7 +269,7 @@ function showMessage(message) {
 }
 
 function addColumn(clickedButton) {
-  const clickedHeader = clickedButton.closest('th');
+  const clickedHeader = clickedButton.closest("th");
   const headersRow = clickedHeader.parentNode;
   const columnIndex = Array.from(headersRow.children).indexOf(clickedHeader);
 
@@ -270,8 +290,8 @@ function addColumn(clickedButton) {
   }
 
   // Insert new cells in body rows at the corresponding index
-  const table = headersRow.closest('table');
-  Array.from(table.querySelectorAll("tbody tr")).forEach(row => {
+  const table = headersRow.closest("table");
+  Array.from(table.querySelectorAll("tbody tr")).forEach((row) => {
     const newCell = document.createElement("td");
     newCell.contentEditable = "true";
     if (row.children[columnIndex + 1]) {
@@ -342,11 +362,11 @@ function updateDateAndTime() {
 
 function attachSortButtonListeners() {
   const sortButtons = document.querySelectorAll(".sort-btn");
-  sortButtons.forEach(button => {
-      button.addEventListener("click", () => {
-          const columnIndex = button.getAttribute("data-column-index");
-          sortColumn(columnIndex);
-      });
+  sortButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const columnIndex = button.getAttribute("data-column-index");
+      sortColumn(columnIndex);
+    });
   });
 }
 
@@ -354,10 +374,11 @@ let sortState = {};
 
 function sortColumn(columnIndex) {
   // Get the current sort order or set default to 'none'
-  let sortOrder = sortState[columnIndex] || 'none';
+  let sortOrder = sortState[columnIndex] || "none";
 
   // Toggle sort order
-  sortOrder = sortOrder === 'asc' ? 'desc' : sortOrder === 'desc' ? 'none' : 'asc';
+  sortOrder =
+    sortOrder === "asc" ? "desc" : sortOrder === "desc" ? "none" : "asc";
   sortState = { [columnIndex]: sortOrder };
 
   // Get table data
@@ -365,10 +386,12 @@ function sortColumn(columnIndex) {
   const rows = Array.from(table.querySelectorAll("tbody tr"));
 
   // Separate pinned rows
-  const pinnedRows = rows.filter(row => row.classList.contains('pinned-row'));
-  const regularRows = rows.filter(row => !row.classList.contains('pinned-row'));
+  const pinnedRows = rows.filter((row) => row.classList.contains("pinned-row"));
+  const regularRows = rows.filter(
+    (row) => !row.classList.contains("pinned-row")
+  );
 
-  if (sortOrder !== 'none') {
+  if (sortOrder !== "none") {
     regularRows.sort((rowA, rowB) => {
       let valA = rowA.cells[parseInt(columnIndex)].textContent.trim();
       let valB = rowB.cells[parseInt(columnIndex)].textContent.trim();
@@ -394,17 +417,17 @@ function sortColumn(columnIndex) {
 
       // Sorting logic
       if (valA < valB) {
-        return sortOrder === 'asc' ? -1 : 1;
+        return sortOrder === "asc" ? -1 : 1;
       }
       if (valA > valB) {
-        return sortOrder === 'asc' ? 1 : -1;
+        return sortOrder === "asc" ? 1 : -1;
       }
       return 0;
     });
 
     // Append sorted rows back to the table
-    pinnedRows.forEach(row => table.querySelector("tbody").prepend(row)); // Keep pinned rows at the top
-    regularRows.forEach(row => table.querySelector("tbody").appendChild(row)); // Append sorted regular rows
+    pinnedRows.forEach((row) => table.querySelector("tbody").prepend(row)); // Keep pinned rows at the top
+    regularRows.forEach((row) => table.querySelector("tbody").appendChild(row)); // Append sorted regular rows
   }
 
   // Update UI arrows to reflect the new sort order
@@ -412,18 +435,18 @@ function sortColumn(columnIndex) {
 }
 
 function updateSortArrows() {
-  document.querySelectorAll('.sort-btn').forEach(button => {
-    const columnIndex = button.getAttribute('data-column-index');
-    const sortOrder = sortState[columnIndex] || 'none';
+  document.querySelectorAll(".sort-btn").forEach((button) => {
+    const columnIndex = button.getAttribute("data-column-index");
+    const sortOrder = sortState[columnIndex] || "none";
     switch (sortOrder) {
-      case 'none':
-        button.textContent = '↕'; // or any neutral symbol
+      case "none":
+        button.textContent = "↕"; // or any neutral symbol
         break;
-      case 'asc':
-        button.textContent = '↑';
+      case "asc":
+        button.textContent = "↑";
         break;
-      case 'desc':
-        button.textContent = '↓';
+      case "desc":
+        button.textContent = "↓";
         break;
     }
   });
@@ -443,34 +466,46 @@ function isDate(value) {
 
 function isPrice(value) {
   // Removing common currency symbols and commas
-  const cleanedValue = value.replace(/[,$€£]/g, '').replace(/,/g, '.');
-  return !isNaN(cleanedValue) && cleanedValue.trim() !== '';
+  const cleanedValue = value.replace(/[,$€£]/g, "").replace(/,/g, ".");
+  return !isNaN(cleanedValue) && cleanedValue.trim() !== "";
 }
 
 function attachPinButtonListeners() {
   const pinButtons = document.querySelectorAll(".pin-row-btn");
-  pinButtons.forEach(button => {
-      button.addEventListener("click", () => {
-          pinRow(button);
-      });
+  pinButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      pinRow(button);
+    });
   });
 }
 
 function pinRow(clickedButton) {
-  const row = clickedButton.closest('tr');
-  const tableBody = row.closest('tbody');
+  const row = clickedButton.closest("tr");
+  const tableBody = row.closest("tbody");
+  const allRows = Array.from(tableBody.querySelectorAll("tr"));
+  const firstUnpinnedRow = allRows.find(r => !r.classList.contains("pinned-row"));
+
   tableBody.prepend(row); // Move the row to the top
-  if (row.classList.contains('pinned-row')) {
-    row.classList.toggle('pinned-row', false);
+  if (row.classList.contains("pinned-row")) {
+    row.classList.remove("pinned-row");
+
+    // Move row down under all pinned rows
+    if (firstUnpinnedRow) {
+      tableBody.insertBefore(row, firstUnpinnedRow);
+    } else {
+      tableBody.appendChild(row); // Append at the end if all rows are pinned
+    }
+
     return;
   }
 
-  row.classList.toggle('pinned-row', true);
+  row.classList.add("pinned-row");
+  tableBody.prepend(row);
 }
 
 function attachThreeDotButtonListeners() {
   const threeDotButtons = document.querySelectorAll(".three-dot-btn");
-  threeDotButtons.forEach(button => {
+  threeDotButtons.forEach((button) => {
     button.addEventListener("click", (event) => {
       const removeButtonTD = event.target.closest("tr").lastElementChild;
       const removeButton = removeButtonTD.firstElementChild;

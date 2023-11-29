@@ -159,8 +159,8 @@ const readFileContent = async (filePath) => {
           const rowObject = {};
           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
             const key = headers[colNumber - 1];
-            if (key === 'Preferito') {
-              rowObject['Preferito'] = cell.value === 'Yes'; // Assuming you saved "Yes" for true
+            if (key === "Preferito") {
+              rowObject["Preferito"] = cell.value === "Yes"; // Assuming you saved "Yes" for true
             } else {
               rowObject[key] = cell.value;
             }
@@ -173,9 +173,15 @@ const readFileContent = async (filePath) => {
         fs.createReadStream(filePath)
           .pipe(csvParser({ separator: ";" }))
           .on("data", (row) => {
-            // Convert 'Preferito' from string to boolean
-            row.Preferito = row.Preferito === 'Yes'; // Assuming you saved "Yes" for true
-            jsonData.push(row);
+            const rowObject = {};
+            Object.entries(row).forEach(([key, value]) => {
+              if (key === "Preferito") {
+                rowObject["Preferito"] = value === "Yes"; // Assuming you saved "Yes" for true
+              } else {
+                rowObject[key] = value;
+              }
+            });
+            jsonData.push(rowObject);
           })
           .on("end", resolve)
           .on("error", reject);
@@ -199,8 +205,10 @@ const updateExcelFile = async (filePath, tableData) => {
 
     // Define columns including the 'Preferito' column
     worksheet.columns = [
-      { header: 'Preferito', key: 'Preferito' },
-      ...Object.keys(tableData[0]).filter(key => key !== 'Preferito').map(key => ({ header: key, key }))
+      { header: "Preferito", key: "Preferito" },
+      ...Object.keys(tableData[0])
+        .filter((key) => key !== "Preferito")
+        .map((key) => ({ header: key, key })),
     ];
 
     // Write new rows with updated data
@@ -222,7 +230,14 @@ const updateExcelFile = async (filePath, tableData) => {
 const handleCSVFile = async (filePath, tableData) => {
   try {
     const header = Object.keys(tableData[0]).join(";");
-    const rows = tableData.map((row) => Object.values(row).join(";"));
+    const rows = tableData.map((row) => {
+      if (row["Preferito"]) {
+        row["Preferito"] = "Yes";
+      } else {
+        row["Preferito"] = "No";
+      }
+      return Object.values(row).join(";");
+    });
     const csvData = [header, ...rows].join("\n");
     fs.writeFileSync(filePath, csvData);
   } catch (error) {
