@@ -175,7 +175,8 @@ function generateTableHTML(headers, data = []) {
   tableHTML += "<tr>";
   tableHTML += '<th>Preferito</th>';
 
-  headers.slice(1).forEach((header, index) => {
+  headers.forEach((header, index) => {
+    if (index === 0) return;
     tableHTML += `<th><div contenteditable='true'>${header}</div><button class="sort-btn" data-column-index="${index}">↕</button><div><button class="add-column-btn">+</button><button class="remove-column-btn">-</button></div></th>`;
   });
   tableHTML += "<th>Azioni</th>";
@@ -186,8 +187,8 @@ function generateTableHTML(headers, data = []) {
 
   if (data.length > 0) {
     data.forEach((row) => {
-      tableHTML += `<tr ${row.isPinned ? "class='pinned-row' checked" : ''} >`;
-      tableHTML += "<td><input type='checkbox' class='pin-row-btn' /></td>";
+      tableHTML += `<tr ${row.Preferito ? "class='pinned-row'" : ''} >`;
+      tableHTML += `<td><button type='checkbox' class='pin-row-btn' ${row.Preferito ? 'checked' : ''} /></td>`;
       headers.slice(1).forEach((header) => {
         tableHTML += `<td contenteditable='true'>${row[header] || ""}</td>`;
       });
@@ -222,7 +223,7 @@ function processTableData(table) {
       });
 
     return Array.from(table.querySelectorAll("tbody tr")).map((row) => {
-      const rowData = { isPinned: row.classList.contains('pinned-row') };
+      const rowData = { Preferito: row.classList.contains('pinned-row') };
       const cells = Array.from(row.cells).slice(1, -2); // Slice to exclude 'Preferito' and 'Azioni' cells
 
       cells.forEach((cell, index) => {

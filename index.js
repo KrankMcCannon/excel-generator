@@ -159,8 +159,8 @@ const readFileContent = async (filePath) => {
           const rowObject = {};
           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
             const key = headers[colNumber - 1];
-            if (key === 'Pinned') {
-              rowObject['isPinned'] = cell.value === 'Yes'; // Assuming you saved "Yes" for true
+            if (key === 'Preferito') {
+              rowObject['Preferito'] = cell.value === 'Yes'; // Assuming you saved "Yes" for true
             } else {
               rowObject[key] = cell.value;
             }
@@ -173,8 +173,8 @@ const readFileContent = async (filePath) => {
         fs.createReadStream(filePath)
           .pipe(csvParser({ separator: ";" }))
           .on("data", (row) => {
-            // Convert 'isPinned' from string to boolean
-            row.isPinned = row.isPinned === 'Yes'; // Assuming you saved "Yes" for true
+            // Convert 'Preferito' from string to boolean
+            row.Preferito = row.Preferito === 'Yes'; // Assuming you saved "Yes" for true
             jsonData.push(row);
           })
           .on("end", resolve)
@@ -197,16 +197,16 @@ const updateExcelFile = async (filePath, tableData) => {
 
     const worksheet = workbook.addWorksheet("Dogs");
 
-    // Define columns including the 'isPinned' column
+    // Define columns including the 'Preferito' column
     worksheet.columns = [
-      { header: 'Pinned', key: 'isPinned' },
-      ...Object.keys(tableData[0]).filter(key => key !== 'isPinned').map(key => ({ header: key, key }))
+      { header: 'Preferito', key: 'Preferito' },
+      ...Object.keys(tableData[0]).filter(key => key !== 'Preferito').map(key => ({ header: key, key }))
     ];
 
     // Write new rows with updated data
     tableData.forEach((rowData) => {
-      // Transform 'isPinned' to a more Excel-friendly format, like "Yes" or "No"
-      rowData.isPinned = rowData.isPinned ? "Yes" : "No";
+      // Transform 'Preferito' to a more Excel-friendly format, like "Yes" or "No"
+      rowData.Preferito = rowData.Preferito ? "Yes" : "No";
       // rowData is an object where key is column header and value is cell value
       worksheet.addRow(rowData).commit();
     });
