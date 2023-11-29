@@ -370,18 +370,24 @@ function sortColumn(columnIndex) {
 
   if (sortOrder !== 'none') {
     regularRows.sort((rowA, rowB) => {
-      let valA = rowA.cells[parseInt(columnIndex) + 1].textContent.trim();
-      let valB = rowB.cells[parseInt(columnIndex) + 1].textContent.trim();
+      let valA = rowA.cells[parseInt(columnIndex)].textContent.trim();
+      let valB = rowB.cells[parseInt(columnIndex)].textContent.trim();
 
       // Check if the values are dates or prices, and parse them
-      if (isDate(valA) && isDate(valB)) {
-        valA = new Date(valA);
-        valB = new Date(valB);
+      if (isDateTime(valA) && isDateTime(valB)) {
+        // Parse both values as dates with time
+        valA = new Date(valA).getTime();
+        valB = new Date(valB).getTime();
+      } else if (isDate(valA) && isDate(valB)) {
+        // Parse both values as dates
+        valA = new Date(valA).getTime();
+        valB = new Date(valB).getTime();
       } else if (isPrice(valA) && isPrice(valB)) {
+        // Parse as float for price comparison
         valA = parseFloat(valA);
         valB = parseFloat(valB);
       } else {
-        // If not, compare them as strings
+        // Compare as lowercase strings
         valA = valA.toLowerCase();
         valB = valB.toLowerCase();
       }
@@ -423,8 +429,16 @@ function updateSortArrows() {
   });
 }
 
+function isDateTime(value) {
+  // Check for date-time format like "12/02/2022 14:53"
+  const dateTimeRegex = /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/;
+  return dateTimeRegex.test(value);
+}
+
 function isDate(value) {
-  return !isNaN(new Date(value).getDate());
+  // Check for date format like "12/02/2022"
+  const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+  return dateRegex.test(value);
 }
 
 function isPrice(value) {
